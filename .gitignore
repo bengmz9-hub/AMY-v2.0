@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+.env.*
+*.pem
+*.key
+*.log
+.audit/
+.agents/
+
+.project-map.md
+AGENTS.md
+CONTINUE.md
+DESIGN.md
+docs/
+.impeccable/

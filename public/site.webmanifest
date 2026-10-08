@@ -1,0 +1,19 @@
+{
+  "name": "AMY | Valorant Player",
+  "short_name": "AMY",
+  "description": "AMY: una escena de Valorant con estética Rose gaming.",
+  "lang": "es",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0f0a0c",
+  "theme_color": "#0f0a0c",
+  "icons": [
+    {
+      "src": "assets/imagenes/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "scope": "./"
+}
