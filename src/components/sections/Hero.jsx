@@ -158,13 +158,15 @@ export default function Hero() {
           <div ref={plane} className="amy-portrait-plane">
             <svg className="amy-portrait" viewBox={`0 0 ${lens.width} ${lens.height}`} role="img" aria-label="AMY con gafas ámbar y chaqueta de cuero negro, integrada en un fondo gris perla con armas de Valorant en distintas direcciones">
               <defs>
+                <filter id={`${id}-face-blend`} filterUnits="userSpaceOnUse" x="808" y="162" width="278" height="202"><feGaussianBlur stdDeviation="3" /></filter>
                 <filter id={`${id}-neck-blend`} filterUnits="userSpaceOnUse" x="840" y="364" width="270" height="344"><feGaussianBlur stdDeviation="4" /></filter>
                 <mask id={`${id}-portrait-retouch`} maskUnits="userSpaceOnUse" x="0" y="0" width={lens.width} height={lens.height}>
                   {/* Retouch only AMY; original glasses, features and tattoos stay underneath. */}
                   <path fill="white" stroke="white" strokeWidth="32" strokeLinejoin="round" d="M956 20 C869 16 809 75 781 124 C737 201 720 277 692 357 C668 426 636 478 602 500 C552 542 526 621 502 700 L466 821 H1438 C1406 741 1376 660 1340 595 C1314 537 1284 500 1234 475 C1204 398 1189 286 1153 203 C1127 100 1082 20 1000 20 Z" />
-                  <path fill="black" d="M836 189 C888 177 1007 174 1051 188 Q1059 192 1061 209 Q1071 222 1059 233 L1056 258 Q1048 269 977 271 Q961 269 947 249 Q935 237 925 251 Q913 272 893 272 Q850 271 836 259 L832 233 Q823 222 833 211 Z" />
-                  <path fill="black" d="M933 265 Q919 271 917 287 Q922 299 943 301 Q965 298 973 286 Q970 274 956 265 Z" />
-                  <ellipse fill="black" cx="946" cy="326" rx="50" ry="20" />
+                  {/* Feather only the mask edges; keep the photo and facial features sharp. */}
+                  <path fill="black" filter={`url(#${id}-face-blend)`} d="M836 189 C888 177 1007 174 1051 188 Q1059 192 1061 209 Q1071 222 1059 233 L1056 258 Q1048 269 977 271 Q961 269 947 249 Q935 237 925 251 Q913 272 893 272 Q850 271 836 259 L832 233 Q823 222 833 211 Z" />
+                  <path fill="black" filter={`url(#${id}-face-blend)`} d="M933 265 Q919 271 917 287 Q922 299 943 301 Q965 298 973 286 Q970 274 956 265 Z" />
+                  <ellipse fill="black" filter={`url(#${id}-face-blend)`} cx="946" cy="326" rx="50" ry="20" />
                   <path fill="black" filter={`url(#${id}-neck-blend)`} d="M893 382 L1027 382 L1048 462 L1085 523 L1086 583 L1045 672 L925 686 L871 617 L862 530 L887 472 Z" />
                 </mask>
               </defs>
