@@ -11,12 +11,35 @@ const LINKS = [
 export default function NavbarAceternity() {
   const [open, setOpen] = useState(false);
   const [isComp, setIsComp] = useState(false);
+  const [inHero, setInHero] = useState(true);
   const ref = useRef(null);
 
   useEffect(() => {
     document.body.classList.toggle('comp-mode', isComp);
     return () => document.body.classList.remove('comp-mode');
   }, [isComp]);
+
+  useEffect(() => {
+    const updateHeroNav = () => {
+      const hero = document.getElementById('amy');
+      if (!hero) {
+        setInHero(false);
+        return;
+      }
+      const rect = hero.getBoundingClientRect();
+      const wipe = parseFloat(hero.dataset.wipe || '0');
+      setInHero(rect.bottom > 140 && wipe < 0.55);
+    };
+    updateHeroNav();
+    window.addEventListener('scroll', updateHeroNav, { passive: true });
+    window.addEventListener('resize', updateHeroNav);
+    window.addEventListener('amy-hero-phase', updateHeroNav);
+    return () => {
+      window.removeEventListener('scroll', updateHeroNav);
+      window.removeEventListener('resize', updateHeroNav);
+      window.removeEventListener('amy-hero-phase', updateHeroNav);
+    };
+  }, []);
 
   const toggleCompMode = () => {
     setIsComp((prev) => !prev);
@@ -38,7 +61,7 @@ export default function NavbarAceternity() {
 
   return (
     <div ref={ref}>
-      <nav className={`ac-nav${open ? " ac-open" : ""}`} aria-label="Principal">
+      <nav className={`ac-nav${open ? " ac-open" : ""}${inHero ? " ac-nav--hero" : ""}`} aria-label="Principal">
         <a href="#" className="ac-logo">
           <span className="ac-logo__dot" aria-hidden="true" />
           AMY
