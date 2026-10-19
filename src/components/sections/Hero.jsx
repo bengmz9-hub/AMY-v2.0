@@ -6,6 +6,9 @@ import './Hero.css';
 
 const asset = (name) => `${import.meta.env.BASE_URL}assets/imagenes/${name}`;
 const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
+const GAMEPLAY_HOLD_SECONDS = 1.2;
+const GLASSES_PULLBACK_SECONDS = 2.3;
+const AMY_END = 0.86;
 
 const SAGE_COPY =
   'Main Sage en Platino 3. Dominio del control de terreno y soporte táctico en cada ronda.';
@@ -45,13 +48,15 @@ export default function Hero() {
   const diveRef = useRef(1); // Used when zoomed into glasses from settled state (1 = in glasses, 0 = fullscreen)
   const diveAnimRef = useRef(0);
   const savedScrollYRef = useRef(0);
+  const automaticIntro = useRef({ progress: 0, complete: false });
+  const gameplayResumeTime = useRef(0);
   const targetCinematicTimeRef = useRef(0);
   const scrubRafRef = useRef(0);
   const cancelWheelScroll = useRef(() => {});
   const signatureTriggeredRef = useRef(false);
-  const pointerRef = useRef({ tx: 0, ty: 0, cx: 0, cy: 0, active: false, raf: 0 });
 
   const [phase, setPhase] = useState('gameplay');
+  const [automaticIntroDone, setAutomaticIntroDone] = useState(false);
   const [paused, setPaused] = useState(false);
   const [manualVideoRequested, setManualVideoRequested] = useState(false);
   const [zoomed, setZoomed] = useState(false);
@@ -99,7 +104,15 @@ export default function Hero() {
     }
   }, []);
 
-  // AMY uses AVIF frames; the existing videos are loaded only on sequence failure.
+  const finishAutomaticIntro = useCallback(() => {
+    automaticIntro.current = { progress: 1, complete: true };
+    setAutomaticIntroDone(true);
+    gameplayVideo.current?.pause();
+    redraw.current();
+  }, []);
+
+  // Only AMY is scrubbed. Gameplay playback owns the clock of the automatic
+  // opening; neither seeking nor scroll drives its video or camera.
   const syncCinematicScrub = useCallback(() => {
     scrubRafRef.current = 0;
     const gv = gameplayVideo.current;
@@ -109,7 +122,12 @@ export default function Hero() {
       iv?.pause();
       return;
     }
-    if (staticScene || zoomedRef.current) {
+    if (staticScene) {
+      gv?.pause();
+      iv?.pause();
+      return;
+    }
+    if (zoomedRef.current) {
       iv?.pause();
       return;
     }
@@ -155,9 +173,35 @@ export default function Hero() {
     scheduleCinematicScrub();
   }, [paused, scheduleCinematicScrub]);
 
-  // Main 3-stage scrollytelling layout:
-  // Scroll allocation: 22% camera exit, 60% AMY video, 18% final reveal and hold.
-  // The visual progress below retains the existing camera and composition timings.
+  // Read the playing video's clock so pause, buffering and visibility changes
+  // also pause the camera. Completing the opening never changes document scroll.
+  useEffect(() => {
+    if (staticScene || !videoAllowed || automaticIntroDone) return;
+    if (gameplayFailed) {
+      finishAutomaticIntro();
+      return;
+    }
+    let frame = 0;
+    const tick = () => {
+      if (automaticIntro.current.complete) return;
+      const gv = gameplayVideo.current;
+      if (gv && !gv.paused && !gv.seeking && !pausedRef.current && !document.hidden && visible.current) {
+        automaticIntro.current.progress = clamp(
+          (gv.currentTime - GAMEPLAY_HOLD_SECONDS) / GLASSES_PULLBACK_SECONDS
+        );
+        if (automaticIntro.current.progress >= 1) {
+          finishAutomaticIntro();
+          return;
+        }
+        redraw.current();
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [staticScene, videoAllowed, automaticIntroDone, gameplayFailed, finishAutomaticIntro]);
+
+  // Automatic gameplay -> automatic pullback -> AMY by scroll -> still portrait.
   useEffect(() => {
     let frame = 0;
     let metrics = null;
@@ -173,11 +217,12 @@ export default function Hero() {
       const requestedProgress = staticScene ? 1 : clamp(rawScroll / travel, 0, 1);
       const iv = introVideo.current;
       const dur = sequenceFailed && iv && Number.isFinite(iv.duration) && iv.duration > 0 ? iv.duration : AMY_SEQUENCE_DURATION;
-      const cinematicProgress = clamp((requestedProgress - 0.22) / 0.60);
+      const cinematicProgress = clamp(requestedProgress / AMY_END);
       const progress = staticScene ? 1
-        : requestedProgress <= 0.22 ? (requestedProgress / 0.22) * 0.21
-        : requestedProgress <= 0.82 ? 0.21 + cinematicProgress * 0.51
-        : 0.72 + ((requestedProgress - 0.82) / 0.18) * 0.28;
+        : !automaticIntro.current.complete ? automaticIntro.current.progress * (introFailed ? 0.72 : 0.21)
+        : introFailed ? 1
+        : requestedProgress <= AMY_END ? 0.21 + cinematicProgress * 0.51
+        : 0.72 + ((requestedProgress - AMY_END) / (1 - AMY_END)) * 0.28;
 
       // Determine active scrollytelling phase from scroll progress
       let nextPhase = 'gameplay';
@@ -214,10 +259,7 @@ export default function Hero() {
       const closeUpGlassesX = m.width * 0.492;
       const closeUpGlassesY = m.height * 0.445;
 
-      // Smoothed pointer movement on settled portrait (disabled on coarse pointers, reduced motion, or zoom)
-      const panWeight = staticScene || isZoomed ? 0 : clamp((progress - 0.8) / 0.15);
-      const panX = pointerRef.current.cx * 5.5 * panWeight;
-      const panY = pointerRef.current.cy * 3.2 * panWeight;
+      // The completed portrait is a still background, including its glasses.
 
       let ease = 1;
       let t = 1;
@@ -265,8 +307,8 @@ export default function Hero() {
       }
 
       const scale = Math.exp(Math.log(startScale) * (1 - ease));
-      const centerX = baseCenterX + panX;
-      const centerY = baseCenterY + panY;
+      const centerX = baseCenterX;
+      const centerY = baseCenterY;
       const x = centerX - anchorSvgX * m.ratio * scale;
       const y = centerY - anchorSvgY * m.ratio * scale;
 
@@ -279,9 +321,7 @@ export default function Hero() {
         lensMaterial.current.setAttribute('transform', svgTransform);
       }
       if (lensGlare.current) {
-        const gx = -pointerRef.current.cx * 4.5 * panWeight;
-        const gy = -pointerRef.current.cy * 2.2 * panWeight;
-        lensGlare.current.setAttribute('transform', `translate(${gx},${gy})`);
+        lensGlare.current.setAttribute('transform', 'translate(0,0)');
       }
 
       const left = Math.max(0, Math.min(m.width, x + lens.bounds.left * m.ratio * scale));
@@ -294,14 +334,12 @@ export default function Hero() {
       if (gameplayVideo.current && gameplayVideo.current.parentElement) {
         gameplayVideo.current.parentElement.style.clipPath =
           t < 0.05 ? 'none' : `url(#${id}-lens-clip)`;
-        const reflShiftX = (50 - pointerRef.current.cx * 3.5 * panWeight).toFixed(2);
-        const reflShiftY = (50 - pointerRef.current.cy * 2.5 * panWeight).toFixed(2);
         Object.assign(gameplayVideo.current.style, {
           left: `${t < 0.05 ? 0 : left}px`,
           top: `${t < 0.05 ? 0 : top}px`,
           width: `${t < 0.05 ? m.width : lensW}px`,
           height: `${t < 0.05 ? m.height : lensH}px`,
-          objectPosition: `${reflShiftX}% ${reflShiftY}%`,
+          objectPosition: '50% 50%',
         });
       }
 
@@ -321,6 +359,10 @@ export default function Hero() {
       const cinematicReady = sequenceFailed ? iv && iv.readyState >= 2 : sequenceReady;
       const cinematicOpacity =
         staticScene || introFailed || isZoomed || !cinematicReady ? 0 : fusionIn * (1 - fusionOut);
+      if (gameplayVideo.current?.parentElement) {
+        gameplayVideo.current.parentElement.style.opacity =
+          staticScene ? '0' : isZoomed ? '1' : (1 - fusionOut).toFixed(4);
+      }
       const cinematicScale =
         progress <= 0.21 ? clamp(scale / closeUpScale, 1, 2.2) : 1;
 
@@ -361,6 +403,8 @@ export default function Hero() {
       stage.current.dataset.progress = progress.toFixed(4);
       stage.current.dataset.requestedProgress = requestedProgress.toFixed(4);
       stage.current.dataset.cinematicTime = targetCinematicTimeRef.current.toFixed(4);
+      stage.current.dataset.autoProgress = automaticIntro.current.progress.toFixed(4);
+      stage.current.dataset.autoDone = String(automaticIntro.current.complete);
       stage.current.dataset.wipe = '0.0000';
       stage.current.dataset.scale = scale.toFixed(4);
       stage.current.dataset.introDone = String(reveal > 0.55);
@@ -415,70 +459,26 @@ export default function Hero() {
       schedule();
     };
 
-    const stepPointer = () => {
-      const p = pointerRef.current;
-      p.raf = 0;
-      p.cx += (p.tx - p.cx) * 0.09;
-      p.cy += (p.ty - p.cy) * 0.09;
-      draw();
-      if (Math.abs(p.tx - p.cx) > 0.002 || Math.abs(p.ty - p.cy) > 0.002) {
-        p.raf = requestAnimationFrame(stepPointer);
-      }
-    };
-
-    const onPointerMove = (e) => {
-      if (
-        staticScene ||
-        phaseRef.current !== 'settled' ||
-        zoomedRef.current ||
-        !visible.current ||
-        document.hidden
-      ) {
-        return;
-      }
-      if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
-      const p = pointerRef.current;
-      p.tx = clamp((e.clientX / Math.max(1, window.innerWidth)) * 2 - 1, -1, 1);
-      p.ty = clamp((e.clientY / Math.max(1, window.innerHeight)) * 2 - 1, -1, 1);
-      if (!p.raf) p.raf = requestAnimationFrame(stepPointer);
-    };
-
-    const onPointerLeave = () => {
-      const p = pointerRef.current;
-      p.tx = 0;
-      p.ty = 0;
-      if (!p.raf && (Math.abs(p.cx) > 0.002 || Math.abs(p.cy) > 0.002)) {
-        p.raf = requestAnimationFrame(stepPointer);
-      }
-    };
-
     const resize = new ResizeObserver(measure);
     resize.observe(stage.current);
     window.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', measure);
-    window.addEventListener('pointermove', onPointerMove, { passive: true });
-    window.addEventListener('blur', onPointerLeave);
     measure();
 
     return () => {
       redraw.current = () => {};
       cancelAnimationFrame(frame);
-      cancelAnimationFrame(pointerRef.current.raf);
       cancelAnimationFrame(scrubRafRef.current);
-      pointerRef.current.raf = 0;
       scrubRafRef.current = 0;
       resize.disconnect();
       window.removeEventListener('scroll', schedule);
       window.removeEventListener('resize', measure);
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('blur', onPointerLeave);
     };
-  }, [staticScene, id, introFailed, sequenceFailed, sequenceReady, introCanvas, updatePhaseState, scheduleCinematicScrub]);
+  }, [staticScene, id, introFailed, sequenceFailed, sequenceReady, introCanvas, updatePhaseState, scheduleCinematicScrub, finishAutomaticIntro]);
 
-  // Dampen mouse-wheel impulses only across AMY's clip. Moving the real scroll
-  // keeps the video, camera and reveal together, without a separate video backlog.
+  // Dampen wheel impulses only while scrubbing AMY. The opening uses no scroll.
   useEffect(() => {
-    if (staticScene || introFailed || paused || zoomed || !videoAllowed) return;
+    if (staticScene || paused || zoomed || !videoAllowed || !automaticIntroDone) return;
     let wheelFrame = 0;
     let targetY = window.scrollY;
     let writtenY = window.scrollY;
@@ -523,8 +523,8 @@ export default function Hero() {
 
       const travel = runway.current.offsetHeight - stage.current.offsetHeight;
       const origin = window.scrollY + runway.current.getBoundingClientRect().top;
-      const start = origin + travel * 0.22;
-      const end = origin + travel * 0.82;
+      const start = origin;
+      const end = origin + travel * AMY_END;
       const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? stage.current.offsetHeight : 1);
       const y = window.scrollY;
       // At either boundary the next outward gesture returns to native scrolling.
@@ -539,8 +539,9 @@ export default function Hero() {
         writtenY = y;
       }
       direction = Math.sign(delta);
-      const duration = introVideo.current?.duration;
-      const pixelsPerVideoSecond = (end - start) / (Number.isFinite(duration) && duration > 0 ? duration : AMY_SEQUENCE_DURATION);
+      const introDuration = introVideo.current?.duration;
+      const pixelsPerVideoSecond = travel * AMY_END /
+        (Number.isFinite(introDuration) && introDuration > 0 ? introDuration : AMY_SEQUENCE_DURATION);
       pixelsPerSecond = pixelsPerVideoSecond * 0.7;
       const maxLead = pixelsPerVideoSecond * 0.25;
       const desired = entering && !wheelFrame
@@ -574,7 +575,7 @@ export default function Hero() {
       window.removeEventListener('resize', cancel);
       document.removeEventListener('visibilitychange', cancel);
     };
-  }, [staticScene, introFailed, paused, zoomed, videoAllowed]);
+  }, [staticScene, paused, zoomed, videoAllowed, automaticIntroDone]);
 
   // Reload media elements only when falling back from AV1 WebM to H.264 MP4
   useEffect(() => {
@@ -589,19 +590,12 @@ export default function Hero() {
     }
   }, [introCodec]);
 
-  // Synchronize gameplay & cinematic video playback with visibility and pause state
+  // One playback policy: gameplay plays during the automatic opening or an
+  // explicit glasses view; AMY remains paused and receives scroll targets.
   useEffect(() => {
     const gv = gameplayVideo.current;
     const iv = introVideo.current;
     let active = true;
-
-    const handleBlocked = (err) => {
-      if (!active || document.hidden) return;
-      if (err && err.name && err.name !== 'NotAllowedError') {
-        return;
-      }
-      setStatus((curr) => (curr === 'error' ? curr : 'blocked'));
-    };
 
     const syncPlayback = () => {
       if (!gv) return;
@@ -612,14 +606,19 @@ export default function Hero() {
         iv.defaultMuted = true;
       }
 
-      if (!videoAllowed || paused || document.hidden || !visible.current) {
-        gv.pause();
-        iv?.pause();
-        return;
-      }
-
-      if (!gameplayFailed) {
-        gv.play().catch(handleBlocked);
+      iv?.pause();
+      const cinematicReady = introFailed || (!sequenceFailed && sequenceReady) || (sequenceFailed && iv?.readyState >= 2);
+      const shouldPlay = () => (zoomedRef.current || !automaticIntro.current.complete) &&
+        videoAllowed && !staticScene && !pausedRef.current && !document.hidden && visible.current && !gameplayFailed;
+      if (shouldPlay() && (zoomedRef.current || cinematicReady)) {
+        gv.play().then(() => {
+          if (active && !shouldPlay()) gv.pause();
+        }).catch((error) => {
+          if (active && shouldPlay() && error.name === 'NotAllowedError') {
+            setStatus('blocked');
+            setPaused(true);
+          }
+        });
       } else {
         gv.pause();
       }
@@ -637,17 +636,20 @@ export default function Hero() {
     // windows less than 5% of that runway can be visible even inside the Hero.
     if (stage.current) observer.observe(stage.current);
     document.addEventListener('visibilitychange', syncPlayback);
+    gv?.addEventListener('loadeddata', syncPlayback);
+    iv?.addEventListener('loadeddata', syncPlayback);
     syncPlayback();
 
     return () => {
       active = false;
       observer.disconnect();
       document.removeEventListener('visibilitychange', syncPlayback);
+      gv?.removeEventListener('loadeddata', syncPlayback);
+      iv?.removeEventListener('loadeddata', syncPlayback);
       gv?.pause();
       iv?.pause();
     };
   }, [
-    phase,
     zoomed,
     reduced,
     manualVideoRequested,
@@ -658,6 +660,9 @@ export default function Hero() {
     gameplayFailed,
     introFailed,
     sequenceFailed,
+    sequenceReady,
+    automaticIntroDone,
+    staticScene,
     scheduleCinematicScrub,
   ]);
 
@@ -680,6 +685,7 @@ export default function Hero() {
   // Codec fallback handlers (AV1 WebM -> H.264 MP4 once -> error, preventing fallback loops)
   const onGameplayError = () => {
     if (gameplayCodec === 'av1') {
+      gameplayResumeTime.current = gameplayVideo.current?.currentTime || 0;
       setGameplayCodec('h264');
       return;
     }
@@ -735,6 +741,11 @@ export default function Hero() {
     savedScrollYRef.current = window.scrollY;
     zoomedRef.current = true;
     setZoomed(true);
+    if (gameplayVideo.current) {
+      try {
+        gameplayVideo.current.currentTime = 0;
+      } catch {}
+    }
     if (pausedRef.current) {
       setPaused(false);
     }
@@ -839,11 +850,12 @@ export default function Hero() {
 
   const skipIntro = () => {
     cancelWheelScroll.current();
+    finishAutomaticIntro();
     if (!staticScene && runway.current && stage.current) {
       const travel = Math.max(1, runway.current.offsetHeight - stage.current.offsetHeight);
       const top = Math.max(
         0,
-        window.scrollY + runway.current.getBoundingClientRect().top + travel * 0.92
+        window.scrollY + runway.current.getBoundingClientRect().top + travel * 0.96
       );
       window.scrollTo({ top, behavior: 'instant' });
     }
@@ -864,10 +876,14 @@ export default function Hero() {
     zoomedRef.current = false;
     setZoomed(false);
     diveRef.current = 1;
+    automaticIntro.current = { progress: 0, complete: false };
+    setAutomaticIntroDone(false);
+    gameplayResumeTime.current = 0;
     targetCinematicTimeRef.current = 0;
     requestCinematicFrame(0);
     signatureTriggeredRef.current = false;
     if (reduced) setManualVideoRequested(true);
+    pausedRef.current = false;
     setPaused(false);
     setSignatureKey((k) => k + 1);
     if (gameplayVideo.current) {
@@ -1054,15 +1070,21 @@ export default function Hero() {
               className="amy-lens-video"
               src={gameplaySrc}
               poster={asset('amy-hero-gameplay-flat-crt-poster.jpg')}
-              autoPlay={videoAllowed && !paused}
               muted
-              loop
+              loop={!automaticIntroDone || zoomed}
               playsInline
               preload="auto"
               tabIndex={-1}
               data-codec={gameplayCodec}
-              onLoadedMetadata={() => redraw.current()}
-              onLoadedData={() => setStatus('ready')}
+              onLoadedMetadata={() => {
+                if (gameplayResumeTime.current > 0 && gameplayVideo.current) {
+                  gameplayVideo.current.currentTime = gameplayResumeTime.current;
+                  gameplayResumeTime.current = 0;
+                }
+                redraw.current();
+              }}
+              onLoadedData={() => { setStatus('ready'); redraw.current(); scheduleCinematicScrub(); }}
+              onSeeked={scheduleCinematicScrub}
               onPlaying={() => setStatus('ready')}
               onError={onGameplayError}
             />
@@ -1260,9 +1282,7 @@ export default function Hero() {
               AMY <span>/ VALORANT</span>
             </span>
             <span className="amy-intro-phase-label">
-              {phase === 'gameplay'
-                ? 'Desliza para conocer a AMY ↓'
-                : 'Sigue deslizando ↓'}
+              {!automaticIntroDone ? 'Conoce a AMY' : 'Desliza para conocer a AMY ↓'}
             </span>
           </div>
           <div className="amy-intro-actions">
@@ -1275,7 +1295,7 @@ export default function Hero() {
               onClick={togglePause}
               aria-pressed={isVideoPaused}
             >
-              {isVideoPaused ? 'Reanudar vídeo' : 'Pausar vídeo'}
+              {isVideoPaused ? 'Reanudar vídeos' : 'Pausar vídeos'}
             </button>
             <a href="#shorts" className="amy-intro-link">
               Ver clips <span aria-hidden="true">↗</span>
@@ -1290,14 +1310,6 @@ export default function Hero() {
         >
           <button className="amy-replay" type="button" onClick={replay}>
             Repetir intro ↺
-          </button>
-          <button
-            className="amy-pause-btn"
-            type="button"
-            onClick={togglePause}
-            aria-pressed={isVideoPaused}
-          >
-            {isVideoPaused ? 'Reproducir vídeo' : 'Pausar vídeo'}
           </button>
         </div>
 
@@ -1319,7 +1331,7 @@ export default function Hero() {
               onClick={togglePause}
               aria-pressed={isVideoPaused}
             >
-              {isVideoPaused ? 'Reproducir vídeo' : 'Pausar vídeo'}
+              {isVideoPaused ? 'Reanudar vídeos' : 'Pausar vídeos'}
             </button>
           </div>
           <p className="amy-zoom-hint" aria-hidden="true">
