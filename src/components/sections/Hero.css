@@ -1,11 +1,12 @@
-/* AMY Hero: scrollytelling .webm -> gameplay fullscreen -> fusión en gafas -> AMY disparando -> fusión con background de AMY con armas, tarjeta de Sage a la izquierda y firma a la derecha. */
+/* AMY Hero: reversible native scroll from fullscreen gameplay to the static AMY background. */
 .amy-hero {
+  --hero-transition: 1.2;
   position: relative;
   width: 100%;
   max-width: none;
   margin: 0;
   padding: 0;
-  height: calc(100dvh + max(10000px, 1000dvh));
+  height: calc(100dvh * (2 + var(--hero-transition)));
   background: #08070a;
   z-index: 3;
 }
@@ -166,27 +167,6 @@
   height: 0;
   overflow: hidden;
   pointer-events: none;
-}
-
-/* Phase B & C: AMY 1440p cinematic video layer */
-.amy-intro-cinematic {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  background: #08070a;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  overflow: clip;
-}
-.amy-intro-video {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 26%;
-  transform-origin: 49.2% 44.5%;
-  will-change: transform;
 }
 
 /* Accessible transparent trigger aligned with the final glasses */
@@ -755,7 +735,7 @@ body.comp-mode .amy-media-notice button:hover {
 /* Mobile composition: upper bio + signature row in safe headroom, portrait below, compact non-overlapping Sage dock at bottom-left */
 @media (max-width: 760px) {
   .amy-hero {
-    height: calc(100dvh + max(8000px, 900dvh));
+    --hero-transition: 1;
   }
   .amy-backdrop-word {
     top: 22%;
