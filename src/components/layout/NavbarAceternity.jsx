@@ -20,8 +20,8 @@ export default function NavbarAceternity() {
   }, [isComp]);
 
   useEffect(() => {
+    const hero = document.getElementById('amy');
     const updateHeroNav = () => {
-      const hero = document.getElementById('amy');
       if (!hero) {
         setInHero(false);
         return;
