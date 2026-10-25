@@ -8,7 +8,7 @@ const LINKS = [
   { href: "#shorts", label: "Amy Show" },
 ];
 
-export default function NavbarAceternity() {
+export default function NavbarAceternity({ isReady }) {
   const [open, setOpen] = useState(false);
   const [isComp, setIsComp] = useState(false);
   const [inHero, setInHero] = useState(true);
@@ -61,7 +61,7 @@ export default function NavbarAceternity() {
 
   return (
     <div ref={ref}>
-      <nav className={`ac-nav${open ? " ac-open" : ""}${inHero ? " ac-nav--hero" : ""}`} aria-label="Principal">
+      <nav className={`ac-nav${open ? " ac-open" : ""}${inHero ? " ac-nav--hero" : ""} ${!isReady ? "opacity-0 pointer-events-none translate-y-4" : "opacity-100 translate-y-0 transition-all duration-1000 delay-[800ms]"}`} aria-label="Principal">
         <a href="#" className="ac-logo">
           <span className="ac-logo__dot" aria-hidden="true" />
           AMY
