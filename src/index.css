@@ -2381,7 +2381,7 @@ a:focus-visible,
   display: flex;
   justify-content: center;
 }
-/* Reduced motion: sin reveals (todo visible) */
+/* Reduced motion: no reveals (everything visible) */
 @media (prefers-reduced-motion: reduce) {
   .wr .wr-word,
   .wr .wr-letter,
