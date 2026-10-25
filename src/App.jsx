@@ -7,7 +7,6 @@ import SetupGear from '@/components/sections/SetupGear.jsx';
 import AmyShow from '@/components/sections/AmyShow.jsx';
 import { useScrollProgress } from '@/hooks/useScrollProgress.js';
 import { useIntersectionFade } from '@/hooks/useIntersectionFade.js';
-import Preloader from '@/components/layout/Preloader.jsx';
 import { useState, useEffect } from 'react';
 
 export default function App() {
@@ -23,12 +22,17 @@ export default function App() {
 
   return (
     <>
-      <Preloader isReady={heroReady} />
+      <div className="jj-central-logo-wrap">
+        <div className={`jj-central-logo ${heroReady ? 'opacity-0 scale-50 -translate-y-[40vh]' : ''}`}>
+          AMY
+        </div>
+      </div>
       <div id="scrollBar"></div>
 
-      <NavbarAceternity />
+      <div className={`jj-wipe-frame ${heroReady ? 'jj-wipe-ready' : ''}`}>
+        <NavbarAceternity isReady={heroReady} />
 
-      <main id="main" aria-label="Contenido principal">
+        <main id="main" aria-label="Contenido principal">
         <Hero />
         <Stats />
         <Agents />
@@ -37,6 +41,7 @@ export default function App() {
       </main>
 
       <Footer />
+      </div>
     </>
   );
 }

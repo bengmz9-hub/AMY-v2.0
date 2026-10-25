@@ -2493,3 +2493,61 @@ a:focus-visible,
     50% { opacity: 0.4; transform: scale(0.8); }
   }
 }
+
+/* ============================================================
+   WIPE-REVEAL (JJettas Style)
+   ============================================================ */
+body {
+  /* Set initial dark background before reveal */
+  background-color: #050608;
+}
+
+.jj-wipe-frame {
+  /* Start hidden/clipped */
+  position: relative;
+  width: 100%;
+  clip-path: polygon(0% 100%, 100% 100%, 100% 100%, 0% 100%);
+  -webkit-clip-path: polygon(0% 100%, 100% 100%, 100% 100%, 0% 100%);
+  /* Add a slight rotation/skew on the bottom edge for the jjettas curtain feel initially */
+  transition: clip-path 1.4s cubic-bezier(0.77, 0, 0.175, 1);
+  will-change: clip-path;
+  background-color: var(--bg-dark);
+}
+
+.jj-wipe-frame.jj-wipe-ready {
+  /* The reveal expands upwards uncovering the page */
+  clip-path: polygon(0% -20%, 100% -20%, 100% 120%, 0% 120%);
+  -webkit-clip-path: polygon(0% -20%, 100% -20%, 100% 120%, 0% 120%);
+}
+
+/* We also need a central logo that scales/moves to the top nav, or fades out */
+.jj-central-logo-wrap {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+  pointer-events: none;
+}
+
+.jj-central-logo {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: clamp(3rem, 10vw, 8rem);
+  letter-spacing: 0.15em;
+  color: #f4f4f5;
+  transition: all 1.2s cubic-bezier(0.77, 0, 0.175, 1);
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+body.comp-mode .jj-central-logo {
+  color: #ff4655;
+}
+
+/* When ready, the central logo scales down and fades, handing off to nav */
+.jj-wipe-frame.jj-wipe-ready ~ .jj-central-logo-wrap .jj-central-logo {
+  transform: translateY(-40vh) scale(0.3);
+  opacity: 0;
+}
