@@ -1,7 +1,7 @@
 // WordReveal — títulos estilo Folira/Create®: texto que se revela en cascada al entrar en viewport.
 // parts: [{ t: 'texto', hl: false }] — hl marca el segmento con la clase .highlight existente del repo.
 // mode: 'words' (default, Folira) | 'letters' (Create®, letra a letra, más cinematográfico).
-// Respeta prefers-reduced-motion (todo visible al instante). CSS: bloque wr-* en index.css.
+// Respeta prefers-reduced-motion (everything visible instantly). CSS: bloque wr-* en index.css.
 import { useEffect, useRef } from 'react';
 
 export default function WordReveal({ as: Tag = 'h2', className = '', parts, mode = 'words' }) {
