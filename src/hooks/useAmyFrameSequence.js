@@ -97,14 +97,15 @@ export default function useAmyFrameSequence({ enabled, canDraw, onReady, onError
         if (distance <= 4) wanted.push(target - distance * direction);
       }
       wanted = wanted.filter((n) => n >= 0 && n < FRAME_COUNT);
+      const wantedSet = new Set(wanted);
       for (const [n, bitmap] of cache) {
-        if (!wanted.includes(n)) {
+        if (!wantedSet.has(n)) {
           bitmap.close();
           cache.delete(n);
         }
       }
       for (const [n, abort] of pending) {
-        if (!wanted.includes(n)) {
+        if (!wantedSet.has(n)) {
           pending.delete(n);
           abort.abort();
         }
