@@ -11,8 +11,15 @@ const LINKS = [
 export default function NavbarAceternity() {
   const [open, setOpen] = useState(false);
   const [isComp, setIsComp] = useState(false);
+  const [heroReady, setHeroReady] = useState(false);
   const [inHero, setInHero] = useState(true);
   const ref = useRef(null);
+
+  useEffect(() => {
+    const onHeroReady = () => setHeroReady(true);
+    window.addEventListener('amy-hero-ready', onHeroReady);
+    return () => window.removeEventListener('amy-hero-ready', onHeroReady);
+  }, []);
 
   useEffect(() => {
     document.body.classList.toggle('comp-mode', isComp);
@@ -61,7 +68,7 @@ export default function NavbarAceternity() {
 
   return (
     <div ref={ref}>
-      <nav className={`ac-nav${open ? " ac-open" : ""}${inHero ? " ac-nav--hero" : ""}`} aria-label="Principal">
+      <nav className={`ac-nav${open ? " ac-open" : ""}${inHero ? " ac-nav--hero" : ""} ${!heroReady ? "opacity-0 pointer-events-none" : "opacity-100 transition-opacity duration-1000 delay-300"}`} aria-label="Principal">
         <a href="#" className="ac-logo">
           <span className="ac-logo__dot" aria-hidden="true" />
           AMY

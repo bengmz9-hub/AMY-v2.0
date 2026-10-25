@@ -1,0 +1,4 @@
+branch_name: jules-implement-wipe-reveal-preloader
+commit_message: feat: implement wipe-reveal preloader similar to jjettas
+title: Feat: Implement wipe-reveal preloader
+description: Implemented a wipe-reveal preloader curtain on page load. It covers the initial UI with a dark overlay and an AMY logo, then smoothly transitions up (wipe-out) when the main hero section reports that it has successfully loaded its resources. This ensures a more cinematic initial presentation mimicking the jjettas.com layout pattern requested.

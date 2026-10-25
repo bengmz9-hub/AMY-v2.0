@@ -63,6 +63,14 @@ export default function Hero() {
   const [signatureKey, setSignatureKey] = useState(0);
   const [status, setStatus] = useState('loading');
   const [portraitError, setPortraitError] = useState(false);
+
+  useEffect(() => {
+    if (status === 'ready' || status === 'error' || portraitError) {
+      setTimeout(() => {
+        window.dispatchEvent(new Event('amy-hero-ready'));
+      }, 100);
+    }
+  }, [status, portraitError]);
   const [reduced, setReduced] = useState(() =>
     typeof window !== 'undefined'
       ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
