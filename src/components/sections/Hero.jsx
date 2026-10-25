@@ -736,6 +736,12 @@ export default function Hero() {
     diveAnimRef.current = requestAnimationFrame(step);
   }, []);
 
+  const handleOpenGlassesDone = useCallback(() => {
+    requestAnimationFrame(() => {
+      zoomCloseBtn.current?.focus({ preventScroll: true });
+    });
+  }, []);
+
   const openGlassesView = useCallback(() => {
     if (phaseRef.current !== 'settled' || zoomedRef.current || staticScene) return;
     savedScrollYRef.current = window.scrollY;
@@ -749,27 +755,25 @@ export default function Hero() {
     if (pausedRef.current) {
       setPaused(false);
     }
-    animateDive(0, 780, () => {
-      requestAnimationFrame(() => {
-        zoomCloseBtn.current?.focus({ preventScroll: true });
-      });
+    animateDive(0, 780, handleOpenGlassesDone);
+  }, [animateDive, staticScene, handleOpenGlassesDone]);
+
+  const handleCloseGlassesDone = useCallback(() => {
+    zoomedRef.current = false;
+    setZoomed(false);
+    if (Math.abs(window.scrollY - savedScrollYRef.current) > 4) {
+      window.scrollTo({ top: savedScrollYRef.current, behavior: 'instant' });
+    }
+    redraw.current();
+    requestAnimationFrame(() => {
+      lensTrigger.current?.focus({ preventScroll: true });
     });
-  }, [animateDive, staticScene]);
+  }, []);
 
   const closeGlassesView = useCallback(() => {
     if (!zoomedRef.current) return;
-    animateDive(1, 680, () => {
-      zoomedRef.current = false;
-      setZoomed(false);
-      if (Math.abs(window.scrollY - savedScrollYRef.current) > 4) {
-        window.scrollTo({ top: savedScrollYRef.current, behavior: 'instant' });
-      }
-      redraw.current();
-      requestAnimationFrame(() => {
-        lensTrigger.current?.focus({ preventScroll: true });
-      });
-    });
-  }, [animateDive]);
+    animateDive(1, 680, handleCloseGlassesDone);
+  }, [animateDive, handleCloseGlassesDone]);
 
   // Escape and downward wheel/swipe exit while in fullscreen glasses re-entry
   useEffect(() => {
@@ -848,6 +852,11 @@ export default function Hero() {
     card.style.setProperty('--card-scale', '1');
   };
 
+  const focusClipsBtn = useCallback(() => {
+    if (copy.current) copy.current.inert = false;
+    clips.current?.focus({ preventScroll: true });
+  }, []);
+
   const skipIntro = () => {
     cancelWheelScroll.current();
     finishAutomaticIntro();
@@ -863,10 +872,7 @@ export default function Hero() {
     if (copy.current) copy.current.inert = false;
     if (introOverlay.current) introOverlay.current.inert = true;
     redraw.current();
-    requestAnimationFrame(() => {
-      if (copy.current) copy.current.inert = false;
-      clips.current?.focus({ preventScroll: true });
-    });
+    requestAnimationFrame(focusClipsBtn);
   };
 
   const replay = () => {
