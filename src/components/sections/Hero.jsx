@@ -509,7 +509,7 @@ export default function Hero() {
       lastTime = now;
       const beforeY = window.scrollY;
       const remaining = targetY - beforeY;
-      const eased = remaining * (1 - Math.exp(-dt / 0.10));
+      const eased = remaining * (1 - Math.exp(-dt / 0.25));
       const movement = clamp(eased, -pixelsPerSecond * dt, pixelsPerSecond * dt);
       window.scrollTo({ top: Math.abs(remaining) <= 1 ? targetY : beforeY + movement, behavior: 'instant' });
       writtenY = window.scrollY;
@@ -550,11 +550,11 @@ export default function Hero() {
       const introDuration = introVideo.current?.duration;
       const pixelsPerVideoSecond = travel * AMY_END /
         (Number.isFinite(introDuration) && introDuration > 0 ? introDuration : AMY_SEQUENCE_DURATION);
-      pixelsPerSecond = pixelsPerVideoSecond * 0.7;
-      const maxLead = pixelsPerVideoSecond * 0.25;
+      pixelsPerSecond = pixelsPerVideoSecond * 1.5;
+      const maxLead = travel * 0.15;
       const desired = entering && !wheelFrame
-        ? (delta > 0 ? start + (y + delta - start) * 0.28 : end + (y + delta - end) * 0.28)
-        : targetY + delta * 0.28;
+        ? (delta > 0 ? start + (y + delta - start) * 1.2 : end + (y + delta - end) * 1.2)
+        : targetY + delta * 1.2;
       // A fast wheel burst cannot queue seconds of motion after the hand stops.
       targetY = clamp(clamp(desired, Math.min(y, start), Math.max(y, end)), y - maxLead, y + maxLead);
       if (!wheelFrame) wheelFrame = requestAnimationFrame(step);

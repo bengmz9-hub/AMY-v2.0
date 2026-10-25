@@ -5,7 +5,7 @@
   max-width: none;
   margin: 0;
   padding: 0;
-  height: calc(100dvh + max(10000px, 1000dvh));
+  height: calc(100dvh + 450dvh);
   background: #08070a;
   z-index: 3;
 }
@@ -755,7 +755,7 @@ body.comp-mode .amy-media-notice button:hover {
 /* Mobile composition: upper bio + signature row in safe headroom, portrait below, compact non-overlapping Sage dock at bottom-left */
 @media (max-width: 760px) {
   .amy-hero {
-    height: calc(100dvh + max(8000px, 900dvh));
+    height: calc(100dvh + 400dvh);
   }
   .amy-backdrop-word {
     top: 22%;
