@@ -36,14 +36,31 @@ export default function AgentCarousel() {
   const track = useRef(null);
   const paused = useRef(false);
   const [idx, setIdx] = useState(0);
+  const cardWidthRef = useRef(0);
+
+  // Invalidate cached width on resize
+  useEffect(() => {
+    const onResize = () => {
+      cardWidthRef.current = 0;
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const step = () => {
     const el = track.current;
     if (!el) return 0;
+
+    if (cardWidthRef.current) {
+      return cardWidthRef.current;
+    }
+
     const card = el.querySelector('.ac-card');
     if (!card) return el.clientWidth;
-    // Recalcula el ancho cada vez (no cachear) para soportar responsive
-    return card.offsetWidth + 24;
+
+    // Cache the width to avoid DOM querying and layout thrashing in rAF loop
+    cardWidthRef.current = card.offsetWidth + 24;
+    return cardWidthRef.current;
   };
 
   const goTo = (i) => {
