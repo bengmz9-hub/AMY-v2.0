@@ -4,6 +4,10 @@ import AmySignature from '@/components/ui/AmySignature.jsx';
 import useAmyFrameSequence, { AMY_SEQUENCE_DURATION } from '@/hooks/useAmyFrameSequence.js';
 import './Hero.css';
 
+import { useHeroAnimation } from '@/hooks/useHeroAnimation.js';
+import { useHeroScrollDampening } from '@/hooks/useHeroScrollDampening.js';
+
+
 const asset = (name) => `${import.meta.env.BASE_URL}assets/imagenes/${name}`;
 const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
 const GAMEPLAY_HOLD_SECONDS = 1.2;
@@ -201,381 +205,57 @@ export default function Hero() {
     return () => cancelAnimationFrame(frame);
   }, [staticScene, videoAllowed, automaticIntroDone, gameplayFailed, finishAutomaticIntro]);
 
-  // Automatic gameplay -> automatic pullback -> AMY by scroll -> still portrait.
-  useEffect(() => {
-    let frame = 0;
-    let metrics = null;
 
-    const draw = () => {
-      frame = 0;
-      if (!metrics || !runway.current || !stage.current || !plane.current) return;
-      const m = metrics;
-      const isZoomed = zoomedRef.current;
+  // Scrollytelling & Parallax Animation
+  useHeroAnimation({
+    staticScene,
+    introFailed,
+    sequenceFailed,
+    sequenceReady,
+    id,
+    runway,
+    stage,
+    plane,
+    introVideo,
+    introCanvas,
+    gameplayVideo,
+    cinematicLayer,
+    aperture,
+    lensMaterial,
+    lensGlare,
+    lensTrigger,
+    copy,
+    introOverlay,
+    zoomedRef,
+    automaticIntro,
+    diveAnimRef,
+    diveRef,
+    targetCinematicTimeRef,
+    signatureTriggeredRef,
+    redraw,
+    scrubRafRef,
+    updatePhaseState,
+    scheduleCinematicScrub,
+    finishAutomaticIntro,
+    setSignatureKey,
+  });
 
-      const travel = Math.max(1, runway.current.offsetHeight - stage.current.offsetHeight);
-      const rawScroll = -runway.current.getBoundingClientRect().top;
-      const requestedProgress = staticScene ? 1 : clamp(rawScroll / travel, 0, 1);
-      const iv = introVideo.current;
-      const dur = sequenceFailed && iv && Number.isFinite(iv.duration) && iv.duration > 0 ? iv.duration : AMY_SEQUENCE_DURATION;
-      const cinematicProgress = clamp(requestedProgress / AMY_END);
-      const progress = staticScene ? 1
-        : !automaticIntro.current.complete ? automaticIntro.current.progress * (introFailed ? 0.72 : 0.21)
-        : introFailed ? 1
-        : requestedProgress <= AMY_END ? 0.21 + cinematicProgress * 0.51
-        : 0.72 + ((requestedProgress - AMY_END) / (1 - AMY_END)) * 0.28;
 
-      // Determine active scrollytelling phase from scroll progress
-      let nextPhase = 'gameplay';
-      if (staticScene || progress >= 0.85) {
-        nextPhase = 'settled';
-      } else if (progress >= 0.72 && !introFailed) {
-        nextPhase = 'crossfade';
-      } else if (progress >= 0.09 && !introFailed) {
-        nextPhase = 'cinematic';
-      } else if (introFailed && progress >= 0.55) {
-        nextPhase = 'settled';
-      }
-      updatePhaseState(nextPhase);
 
-      // Stage 1 + 2 camera dive (0 = fullscreen gameplay in lens opening, closeUpEase = matched to AMY 0.0s close-up glasses, 1.0 = final portrait)
-      const startScale =
-        Math.max(
-          m.width / (lens.opening.width * m.ratio),
-          m.height / (lens.opening.height * m.ratio)
-        ) * 1.2;
-      const glassesSvgW = lens.bounds.right - lens.bounds.left;
-      const glassesSvgX = (lens.bounds.left + lens.bounds.right) * 0.5;
-      const glassesSvgY = (lens.bounds.top + lens.bounds.bottom) * 0.5;
+  // Scroll Dampening & Hijacking
+  useHeroScrollDampening({
+    staticScene,
+    paused,
+    zoomed,
+    videoAllowed,
+    automaticIntroDone,
+    runway,
+    stage,
+    introVideo,
+    visible,
+    cancelWheelScroll,
+  });
 
-      const closeUpScale = Math.max(1.8, (0.565 * m.width) / (glassesSvgW * m.ratio));
-      const closeUpEase = clamp(
-        1 - Math.log(closeUpScale) / Math.log(startScale),
-        0.35,
-        0.78
-      );
-
-      const finalGlassesX = m.x + glassesSvgX * m.ratio;
-      const finalGlassesY = m.y + glassesSvgY * m.ratio;
-      const closeUpGlassesX = m.width * 0.492;
-      const closeUpGlassesY = m.height * 0.445;
-
-      // The completed portrait is a still background, including its glasses.
-
-      let ease = 1;
-      let t = 1;
-      let anchorSvgX = glassesSvgX;
-      let anchorSvgY = glassesSvgY;
-      let baseCenterX = finalGlassesX;
-      let baseCenterY = finalGlassesY;
-
-      if (staticScene) {
-        ease = 1;
-        t = 1;
-      } else if (isZoomed || diveAnimRef.current) {
-        t = clamp(diveRef.current, 0, 1);
-        ease = smoothstep(t);
-        anchorSvgX = lens.focus.x + (glassesSvgX - lens.focus.x) * ease;
-        anchorSvgY = lens.focus.y + (glassesSvgY - lens.focus.y) * ease;
-        baseCenterX = m.width / 2 + (finalGlassesX - m.width / 2) * ease;
-        baseCenterY = m.height / 2 + (finalGlassesY - m.height / 2) * ease;
-      } else if (introFailed) {
-        t = clamp((progress - 0.04) / 0.68, 0, 1);
-        ease = smoothstep(t);
-        anchorSvgX = lens.focus.x + (glassesSvgX - lens.focus.x) * ease;
-        anchorSvgY = lens.focus.y + (glassesSvgY - lens.focus.y) * ease;
-        baseCenterX = m.width / 2 + (finalGlassesX - m.width / 2) * ease;
-        baseCenterY = m.height / 2 + (finalGlassesY - m.height / 2) * ease;
-      } else if (progress <= 0.21) {
-        const s1Raw = clamp((progress - 0.01) / 0.20, 0, 1);
-        const s1 = smoothstep(s1Raw);
-        t = s1Raw * closeUpEase;
-        ease = s1 * closeUpEase;
-        const anchorBlend = smoothstep(clamp((s1Raw - 0.18) / 0.82, 0, 1));
-        anchorSvgX = lens.focus.x + (glassesSvgX - lens.focus.x) * anchorBlend;
-        anchorSvgY = lens.focus.y + (glassesSvgY - lens.focus.y) * anchorBlend;
-        baseCenterX = m.width / 2 + (closeUpGlassesX - m.width / 2) * s1;
-        baseCenterY = m.height / 2 + (closeUpGlassesY - m.height / 2) * s1;
-      } else {
-        const s2Raw = clamp((progress - 0.21) / 0.47, 0, 1);
-        const s2 = smoothstep(s2Raw);
-        t = closeUpEase + s2Raw * (1 - closeUpEase);
-        ease = closeUpEase + s2 * (1 - closeUpEase);
-        anchorSvgX = glassesSvgX;
-        anchorSvgY = glassesSvgY;
-        baseCenterX = closeUpGlassesX + (finalGlassesX - closeUpGlassesX) * s2;
-        baseCenterY = closeUpGlassesY + (finalGlassesY - closeUpGlassesY) * s2;
-      }
-
-      const scale = Math.exp(Math.log(startScale) * (1 - ease));
-      const centerX = baseCenterX;
-      const centerY = baseCenterY;
-      const x = centerX - anchorSvgX * m.ratio * scale;
-      const y = centerY - anchorSvgY * m.ratio * scale;
-
-      plane.current.style.transform = `translate3d(${x}px,${y}px,0) scale(${scale})`;
-      const svgTransform = `translate(${x},${y}) scale(${m.ratio * scale})`;
-      if (aperture.current) {
-        aperture.current.setAttribute('transform', svgTransform);
-      }
-      if (lensMaterial.current) {
-        lensMaterial.current.setAttribute('transform', svgTransform);
-      }
-      if (lensGlare.current) {
-        lensGlare.current.setAttribute('transform', 'translate(0,0)');
-      }
-
-      const left = Math.max(0, Math.min(m.width, x + lens.bounds.left * m.ratio * scale));
-      const top = Math.max(0, Math.min(m.height, y + lens.bounds.top * m.ratio * scale));
-      const right = Math.max(0, Math.min(m.width, x + lens.bounds.right * m.ratio * scale));
-      const bottom = Math.max(0, Math.min(m.height, y + lens.bounds.bottom * m.ratio * scale));
-      const lensW = Math.max(1, right - left);
-      const lensH = Math.max(1, bottom - top);
-
-      if (gameplayVideo.current && gameplayVideo.current.parentElement) {
-        gameplayVideo.current.parentElement.style.clipPath =
-          t < 0.05 ? 'none' : `url(#${id}-lens-clip)`;
-        Object.assign(gameplayVideo.current.style, {
-          left: `${t < 0.05 ? 0 : left}px`,
-          top: `${t < 0.05 ? 0 : top}px`,
-          width: `${t < 0.05 ? m.width : lensW}px`,
-          height: `${t < 0.05 ? m.height : lensH}px`,
-          objectPosition: '50% 50%',
-        });
-      }
-
-      if (lensTrigger.current) {
-        const pad = 8;
-        Object.assign(lensTrigger.current.style, {
-          left: `${Math.max(0, left - pad)}px`,
-          top: `${Math.max(0, top - pad)}px`,
-          width: `${lensW + pad * 2}px`,
-          height: `${lensH + pad * 2}px`,
-        });
-      }
-
-      // Stage 1 -> Stage 2 -> Stage 3 fusion of the AMY shooting sequence.
-      const fusionIn = smoothstep(clamp((progress - 0.11) / 0.10, 0, 1));
-      const fusionOut = smoothstep(clamp((progress - 0.72) / 0.13, 0, 1));
-      const cinematicReady = sequenceFailed ? iv && iv.readyState >= 2 : sequenceReady;
-      const cinematicOpacity =
-        staticScene || introFailed || isZoomed || !cinematicReady ? 0 : fusionIn * (1 - fusionOut);
-      if (gameplayVideo.current?.parentElement) {
-        gameplayVideo.current.parentElement.style.opacity =
-          staticScene ? '0' : isZoomed ? '1' : (1 - fusionOut).toFixed(4);
-      }
-      const cinematicScale =
-        progress <= 0.21 ? clamp(scale / closeUpScale, 1, 2.2) : 1;
-
-      if (cinematicLayer.current) {
-        cinematicLayer.current.style.opacity = cinematicOpacity.toFixed(4);
-        cinematicLayer.current.style.visibility =
-          cinematicOpacity > 0.005 ? 'visible' : 'hidden';
-      }
-      const cinematicSurface = introCanvas.current || introVideo.current;
-      if (cinematicSurface) {
-        cinematicSurface.style.transform = `scale(${cinematicScale.toFixed(4)})`;
-      }
-
-      targetCinematicTimeRef.current = cinematicProgress * dur;
-      scheduleCinematicScrub();
-
-      const lensSettle = clamp((ease - 0.25) / 0.75, 0, 1);
-      const reveal = staticScene
-        ? 1
-        : isZoomed
-          ? 0
-          : smoothstep(clamp((progress - 0.71) / 0.16, 0, 1));
-      const introFade = staticScene ? 1 : smoothstep(clamp((progress - 0.68) / 0.16, 0, 1));
-
-      if (reveal > 0.55 && !signatureTriggeredRef.current) {
-        signatureTriggeredRef.current = true;
-      } else if (progress < 0.1 && signatureTriggeredRef.current) {
-        signatureTriggeredRef.current = false;
-        setSignatureKey((k) => k + 1);
-      }
-
-      stage.current.style.clipPath = 'none';
-      stage.current.style.setProperty('--lens-settle', lensSettle.toFixed(4));
-      stage.current.style.setProperty('--reveal', reveal.toFixed(4));
-      stage.current.style.setProperty('--intro-fade', introFade.toFixed(4));
-      stage.current.style.setProperty('--wipe', '0.0000');
-      stage.current.dataset.phase = nextPhase;
-      stage.current.dataset.progress = progress.toFixed(4);
-      stage.current.dataset.requestedProgress = requestedProgress.toFixed(4);
-      stage.current.dataset.cinematicTime = targetCinematicTimeRef.current.toFixed(4);
-      stage.current.dataset.autoProgress = automaticIntro.current.progress.toFixed(4);
-      stage.current.dataset.autoDone = String(automaticIntro.current.complete);
-      stage.current.dataset.wipe = '0.0000';
-      stage.current.dataset.scale = scale.toFixed(4);
-      stage.current.dataset.introDone = String(reveal > 0.55);
-      stage.current.dataset.zoomed = String(isZoomed);
-      runway.current.dataset.wipe = '0.0000';
-      runway.current.dataset.progress = progress.toFixed(4);
-
-      const isSettled = nextPhase === 'settled';
-      if (copy.current) {
-        copy.current.inert = !(reveal > 0.25 && !isZoomed);
-      }
-      if (introOverlay.current) {
-        introOverlay.current.inert = isSettled || isZoomed;
-      }
-      if (lensTrigger.current) {
-        const shouldBeActive = isSettled && !isZoomed && !staticScene;
-        lensTrigger.current.inert = !shouldBeActive;
-        if (!shouldBeActive && document.activeElement === lensTrigger.current) {
-          lensTrigger.current.blur();
-        }
-      }
-    };
-
-    const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(draw);
-    };
-    redraw.current = schedule;
-
-    const measure = () => {
-      if (!stage.current || !plane.current) return;
-      const scene = stage.current.getBoundingClientRect();
-      const isMobilePortrait = scene.width <= 760 && scene.height > 520;
-      const headroom = isMobilePortrait
-        ? Math.round(Math.min(158, Math.max(118, scene.height * 0.175)))
-        : 0;
-      const availHeight = Math.max(240, scene.height - headroom);
-      const ratio = Math.max(scene.width / lens.width, availHeight / lens.height);
-      const width = lens.width * ratio;
-      const height = lens.height * ratio;
-      plane.current.style.width = `${width}px`;
-      plane.current.style.height = `${height}px`;
-      metrics = {
-        width: scene.width,
-        height: scene.height,
-        ratio,
-        x: (scene.width - width) / 2,
-        y: headroom + (availHeight - height) / 2,
-        headroom,
-      };
-      stage.current.style.setProperty('--mobile-headroom', `${headroom}px`);
-      stage.current.dataset.cropped = String(metrics.x / ratio < -130);
-      schedule();
-    };
-
-    const resize = new ResizeObserver(measure);
-    resize.observe(stage.current);
-    window.addEventListener('scroll', schedule, { passive: true });
-    window.addEventListener('resize', measure);
-    measure();
-
-    return () => {
-      redraw.current = () => {};
-      cancelAnimationFrame(frame);
-      cancelAnimationFrame(scrubRafRef.current);
-      scrubRafRef.current = 0;
-      resize.disconnect();
-      window.removeEventListener('scroll', schedule);
-      window.removeEventListener('resize', measure);
-    };
-  }, [staticScene, id, introFailed, sequenceFailed, sequenceReady, introCanvas, updatePhaseState, scheduleCinematicScrub, finishAutomaticIntro]);
-
-  // Dampen wheel impulses only while scrubbing AMY. The opening uses no scroll.
-  useEffect(() => {
-    if (staticScene || paused || zoomed || !videoAllowed || !automaticIntroDone) return;
-    let wheelFrame = 0;
-    let targetY = window.scrollY;
-    let writtenY = window.scrollY;
-    let lastTime = 0;
-    let direction = 0;
-    let pixelsPerSecond = 0;
-    let stalledFrames = 0;
-
-    const cancel = () => {
-      cancelAnimationFrame(wheelFrame);
-      wheelFrame = 0;
-      lastTime = 0;
-      direction = 0;
-      stalledFrames = 0;
-    };
-    cancelWheelScroll.current = cancel;
-
-    const step = (now) => {
-      const dt = Math.min(32, lastTime ? now - lastTime : 16) / 1000;
-      lastTime = now;
-      const beforeY = window.scrollY;
-      const remaining = targetY - beforeY;
-      const eased = remaining * (1 - Math.exp(-dt / 0.10));
-      const movement = clamp(eased, -pixelsPerSecond * dt, pixelsPerSecond * dt);
-      window.scrollTo({ top: Math.abs(remaining) <= 1 ? targetY : beforeY + movement, behavior: 'instant' });
-      writtenY = window.scrollY;
-      stalledFrames = writtenY === beforeY ? stalledFrames + 1 : 0;
-      // Browsers can round subpixel scroll requests; do not leave a RAF alive
-      // forever when the final fraction of a pixel cannot be reached.
-      if (Math.abs(targetY - writtenY) <= 1 || stalledFrames >= 2) {
-        window.scrollTo({ top: targetY, behavior: 'instant' });
-        writtenY = window.scrollY;
-        cancel();
-      } else wheelFrame = requestAnimationFrame(step);
-    };
-
-    const onWheel = (event) => {
-      if (event.ctrlKey || event.defaultPrevented || !event.cancelable ||
-          Math.abs(event.deltaX) >= Math.abs(event.deltaY) || document.hidden || !visible.current) return;
-      if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable="true"], [role="slider"]')) return;
-      if (!runway.current || !stage.current) return;
-
-      const travel = runway.current.offsetHeight - stage.current.offsetHeight;
-      const origin = window.scrollY + runway.current.getBoundingClientRect().top;
-      const start = origin;
-      const end = origin + travel * AMY_END;
-      const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? stage.current.offsetHeight : 1);
-      const y = window.scrollY;
-      // At either boundary the next outward gesture returns to native scrolling.
-      if (!wheelFrame && ((y <= start + 0.5 && delta < 0) || (y >= end - 0.5 && delta > 0))) return;
-      const inside = y >= start && y <= end;
-      const entering = delta > 0 ? y < start && y + delta >= start : y > end && y + delta <= end;
-      if (!inside && !entering && !wheelFrame) return;
-
-      event.preventDefault();
-      if (!wheelFrame || Math.sign(delta) !== direction) {
-        targetY = y;
-        writtenY = y;
-      }
-      direction = Math.sign(delta);
-      const introDuration = introVideo.current?.duration;
-      const pixelsPerVideoSecond = travel * AMY_END /
-        (Number.isFinite(introDuration) && introDuration > 0 ? introDuration : AMY_SEQUENCE_DURATION);
-      pixelsPerSecond = pixelsPerVideoSecond * 0.7;
-      const maxLead = pixelsPerVideoSecond * 0.25;
-      const desired = entering && !wheelFrame
-        ? (delta > 0 ? start + (y + delta - start) * 0.28 : end + (y + delta - end) * 0.28)
-        : targetY + delta * 0.28;
-      // A fast wheel burst cannot queue seconds of motion after the hand stops.
-      targetY = clamp(clamp(desired, Math.min(y, start), Math.max(y, end)), y - maxLead, y + maxLead);
-      if (!wheelFrame) wheelFrame = requestAnimationFrame(step);
-    };
-
-    const onScroll = () => {
-      if (wheelFrame && Math.abs(window.scrollY - writtenY) > 2) cancel();
-    };
-    window.addEventListener('wheel', onWheel, { passive: false });
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('keydown', cancel);
-    window.addEventListener('pointerdown', cancel, { passive: true });
-    window.addEventListener('touchstart', cancel, { passive: true });
-    window.addEventListener('blur', cancel);
-    window.addEventListener('resize', cancel);
-    document.addEventListener('visibilitychange', cancel);
-    return () => {
-      cancel();
-      cancelWheelScroll.current = () => {};
-      window.removeEventListener('wheel', onWheel);
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('keydown', cancel);
-      window.removeEventListener('pointerdown', cancel);
-      window.removeEventListener('touchstart', cancel);
-      window.removeEventListener('blur', cancel);
-      window.removeEventListener('resize', cancel);
-      document.removeEventListener('visibilitychange', cancel);
-    };
-  }, [staticScene, paused, zoomed, videoAllowed, automaticIntroDone]);
 
   // Reload media elements only when falling back from AV1 WebM to H.264 MP4
   useEffect(() => {
