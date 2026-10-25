@@ -234,13 +234,7 @@ export default function Hero() {
 
       // Determine active scrollytelling phase from scroll progress
       let nextPhase = 'gameplay';
-      if (staticScene || progress >= 0.85) {
-        nextPhase = 'settled';
-      } else if (progress >= 0.72 && !introFailed) {
-        nextPhase = 'crossfade';
-      } else if (progress >= 0.09 && !introFailed) {
-        nextPhase = 'cinematic';
-      } else if (introFailed && progress >= 0.55) {
+      if (staticScene || progress >= 0.09) {
         nextPhase = 'settled';
       }
       updatePhaseState(nextPhase);
@@ -388,12 +382,8 @@ export default function Hero() {
       scheduleCinematicScrub();
 
       const lensSettle = clamp((ease - 0.25) / 0.75, 0, 1);
-      const reveal = staticScene
-        ? 1
-        : isZoomed
-          ? 0
-          : smoothstep(clamp((progress - 0.71) / 0.16, 0, 1));
-      const introFade = staticScene ? 1 : smoothstep(clamp((progress - 0.68) / 0.16, 0, 1));
+      const reveal = staticScene ? 1 : isZoomed ? 0 : smoothstep(clamp((progress - 0.1) / 0.15, 0, 1));
+      const introFade = staticScene ? 1 : smoothstep(clamp((progress - 0.1) / 0.1, 0, 1));
 
       if (reveal > 0.55 && !signatureTriggeredRef.current) {
         signatureTriggeredRef.current = true;
