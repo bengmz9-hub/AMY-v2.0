@@ -1,4 +1,5 @@
 import React from 'react';
+import './ErrorBoundary.css';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -17,10 +18,10 @@ export class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '2rem', textAlign: 'center', color: '#ff4655', background: '#08070a', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <h2 style={{ fontFamily: 'Rajdhani, sans-serif', textTransform: 'uppercase', letterSpacing: '2px' }}>⚠️ Interrupción en el Sistema Táctico</h2>
-          <p style={{ color: '#aaa', margin: '1rem 0' }}>Se ha producido un error inesperado en la interfaz.</p>
-          <button onClick={() => window.location.reload()} style={{ padding: '0.6rem 1.5rem', background: '#ff4655', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+        <div className="error-boundary">
+          <h2>⚠️ Interrupción en el Sistema Táctico</h2>
+          <p>Se ha producido un error inesperado en la interfaz.</p>
+          <button onClick={() => window.location.reload()}>
             RECARGAR SISTEMA
           </button>
         </div>
