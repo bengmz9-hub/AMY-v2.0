@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import lens from '@/data/heroLens.json';
 import AmySignature from '@/components/ui/AmySignature.jsx';
+import { noop } from "../../utils/noop.js";
 import useAmyFrameSequence, { AMY_SEQUENCE_DURATION } from '@/hooks/useAmyFrameSequence.js';
 import './Hero.css';
 
@@ -41,7 +42,7 @@ export default function Hero() {
   const sageCard = useRef(null);
 
   const visible = useRef(true);
-  const redraw = useRef(() => {});
+  const redraw = useRef(noop);
   const phaseRef = useRef('gameplay');
   const pausedRef = useRef(false);
   const zoomedRef = useRef(false);
@@ -52,7 +53,7 @@ export default function Hero() {
   const gameplayResumeTime = useRef(0);
   const targetCinematicTimeRef = useRef(0);
   const scrubRafRef = useRef(0);
-  const cancelWheelScroll = useRef(() => {});
+  const cancelWheelScroll = useRef(noop);
   const signatureTriggeredRef = useRef(false);
 
   const [phase, setPhase] = useState('gameplay');
@@ -466,7 +467,7 @@ export default function Hero() {
     measure();
 
     return () => {
-      redraw.current = () => {};
+      redraw.current = noop;
       cancelAnimationFrame(frame);
       cancelAnimationFrame(scrubRafRef.current);
       scrubRafRef.current = 0;
@@ -565,7 +566,7 @@ export default function Hero() {
     document.addEventListener('visibilitychange', cancel);
     return () => {
       cancel();
-      cancelWheelScroll.current = () => {};
+      cancelWheelScroll.current = noop;
       window.removeEventListener('wheel', onWheel);
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('keydown', cancel);
