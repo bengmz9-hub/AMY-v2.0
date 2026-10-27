@@ -101,6 +101,17 @@ export default function Hero() {
     pausedRef.current = paused;
   }, [paused]);
 
+  // Navigation owns its destination; cancel glasses without restoring the saved Hero position.
+  const cancelGlassesForNavigation = useCallback(() => {
+    if (!zoomedRef.current && !diveAnimRef.current) return;
+    cancelAnimationFrame(diveAnimRef.current);
+    diveAnimRef.current = 0;
+    diveRef.current = 1;
+    zoomedRef.current = false;
+    setZoomed(false);
+    redraw.current();
+  }, []);
+
   // Native scroll moves the camera in both directions; the gameplay clock stays independent.
   useEffect(() => {
     let frame = 0;
@@ -252,7 +263,10 @@ export default function Hero() {
         if (scroll < transition - 1) {
           holdUntil = 0;
           if (window.scrollY < previousScroll) bypassHold = false;
-        } else if (!bypassHold && !holdUntil && window.scrollY > previousScroll) {
+        } else if (!bypassHold && !holdUntil && window.scrollY > previousScroll &&
+          previousScroll - origin <= end) {
+          // Only arrivals from within the Hero arm the dwell. A restored position
+          // below it must stay free, while a large gesture crossing it still waits.
           holdUntil = performance.now() + BACKGROUND_HOLD_MS;
         }
         // Keep the full portrait visible for a minimum dwell, even after a large
@@ -264,11 +278,21 @@ export default function Hero() {
       previousScroll = window.scrollY;
       schedule();
     };
+    const onHistoryNavigation = () => {
+      // popstate runs before the browser restores scroll; hashchange also covers
+      // fragment navigation that did not come from a click.
+      bypassHold = true;
+      holdUntil = 0;
+      cancelGlassesForNavigation();
+    };
     const onAnchorClick = (event) => {
       const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
       if (link && link.hash && link.hash !== '#amy' && link.hash !== '#') {
         bypassHold = true;
         holdUntil = 0;
+      }
+      if (link && (link.hash || link.getAttribute('href') === '#')) {
+        cancelGlassesForNavigation();
       }
     };
 
@@ -302,6 +326,8 @@ export default function Hero() {
     resize.observe(stage.current);
     window.addEventListener('scroll', onScroll, { passive: true });
     document.addEventListener('click', onAnchorClick, true);
+    window.addEventListener('popstate', onHistoryNavigation);
+    window.addEventListener('hashchange', onHistoryNavigation);
     window.addEventListener('resize', measure);
     measure();
 
@@ -311,9 +337,11 @@ export default function Hero() {
       resize.disconnect();
       window.removeEventListener('scroll', onScroll);
       document.removeEventListener('click', onAnchorClick, true);
+      window.removeEventListener('popstate', onHistoryNavigation);
+      window.removeEventListener('hashchange', onHistoryNavigation);
       window.removeEventListener('resize', measure);
     };
-  }, [staticScene, id, gameplayFailed, updatePhaseState]);
+  }, [staticScene, id, gameplayFailed, updatePhaseState, cancelGlassesForNavigation]);
 
   // Reload media elements only when falling back from AV1 WebM to H.264 MP4
   useEffect(() => {
