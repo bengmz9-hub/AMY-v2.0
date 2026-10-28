@@ -1,6 +1,6 @@
 /* AMY Hero: reversible native scroll from fullscreen gameplay to the static AMY background. */
 .amy-hero {
-  --hero-transition: 1.2;
+  --hero-transition: 2.4;
   position: relative;
   width: 100%;
   max-width: none;
