@@ -201,11 +201,11 @@ export default function Hero() {
         });
       }
 
-      // Fade only the gameplay reflection near the end, leaving literal still glasses.
+      // The opening video keeps playing inside the lenses after the camera settles.
+      // Reduced motion keeps the still portrait until playback is explicitly requested.
       if (gameplayVideo.current?.parentElement) {
-        const fade = smoothstep(clamp((progress - 0.82) / 0.18));
         gameplayVideo.current.parentElement.style.opacity =
-          staticScene || gameplayFailed ? '0' : isZoomed ? '1' : (1 - fade).toFixed(4);
+          !videoAllowed || gameplayFailed ? '0' : '1';
       }
 
       const lensSettle = clamp((ease - 0.25) / 0.75);
@@ -342,7 +342,7 @@ export default function Hero() {
       window.removeEventListener('hashchange', onHistoryNavigation);
       window.removeEventListener('resize', measure);
     };
-  }, [staticScene, id, gameplayFailed, updatePhaseState, cancelGlassesForNavigation]);
+  }, [staticScene, videoAllowed, id, gameplayFailed, updatePhaseState, cancelGlassesForNavigation]);
 
   // Reload media elements only when falling back from AV1 WebM to H.264 MP4
   useEffect(() => {
@@ -351,8 +351,8 @@ export default function Hero() {
     }
   }, [gameplayCodec]);
 
-  // One playback policy: gameplay plays while visible in the scroll transition or an
-  // explicit glasses view. The final AMY background never plays or scrubs.
+  // One video clock runs through the intro, settled glasses and fullscreen re-entry.
+  // The AMY portrait stays still; only the lens reflection plays while visible.
   useEffect(() => {
     const gv = gameplayVideo.current;
     let active = true;
@@ -361,8 +361,8 @@ export default function Hero() {
       if (!gv) return;
       gv.muted = true;
       gv.defaultMuted = true;
-      const shouldPlay = () => (zoomedRef.current || phaseRef.current !== 'settled') &&
-        videoAllowed && !staticScene && !pausedRef.current && !document.hidden && visible.current && !gameplayFailed;
+      const shouldPlay = () => videoAllowed && !pausedRef.current &&
+        !document.hidden && visible.current && !gameplayFailed;
       if (shouldPlay()) {
         gv.play().then(() => {
           if (active && !shouldPlay()) gv.pause();
@@ -471,11 +471,6 @@ export default function Hero() {
     savedScrollYRef.current = window.scrollY;
     zoomedRef.current = true;
     setZoomed(true);
-    if (gameplayVideo.current) {
-      try {
-        gameplayVideo.current.currentTime = 0;
-      } catch {}
-    }
     if (pausedRef.current) {
       setPaused(false);
     }
@@ -777,7 +772,7 @@ export default function Hero() {
               src={gameplaySrc}
               poster={asset('amy-hero-gameplay-flat-crt-poster.jpg')}
               muted
-              loop={!staticScene && (phase !== 'settled' || zoomed)}
+              loop
               playsInline
               preload="auto"
               tabIndex={-1}
@@ -996,6 +991,14 @@ export default function Hero() {
           className="amy-controls"
           inert={phase !== 'settled' || zoomed ? true : undefined}
         >
+          <button
+            className="amy-pause-btn"
+            type="button"
+            onClick={togglePause}
+            aria-pressed={isVideoPaused}
+          >
+            {isVideoPaused ? 'Reanudar vídeo' : 'Pausar vídeo'}
+          </button>
           <button className="amy-replay" type="button" onClick={replay}>
             Repetir intro ↺
           </button>
