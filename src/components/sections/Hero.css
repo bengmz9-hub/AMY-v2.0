@@ -21,6 +21,7 @@
   background: linear-gradient(90deg, #d3cdcb 0%, #e4ded8 50%, #c8c3c1 100%);
   --reveal: 0;
   --intro-fade: 0;
+  --hero-progress: 0;
   --lens-settle: 0;
   --wipe: 0;
   --mobile-headroom: 0px;
@@ -183,6 +184,30 @@
 .amy-lens-trigger:hover {
   border-color: rgba(255, 244, 223, 0.38);
   box-shadow: 0 0 18px rgba(192, 122, 139, 0.28);
+}
+.amy-lens-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  border: 1px solid #c07a8b80;
+  border-radius: 999px;
+  background: #100d12ed;
+  color: #fff4f7;
+  font: 500 11px / 1.2 'Inter', sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.amy-lens-trigger:focus-visible .amy-lens-hint {
+  opacity: 1;
+}
+@media (hover: hover) and (pointer: fine) {
+  .amy-lens-trigger:hover .amy-lens-hint {
+    opacity: 1;
+  }
 }
 .amy-stage:not([data-phase='settled']) .amy-lens-trigger,
 .amy-stage[data-zoomed='true'] .amy-lens-trigger,
@@ -418,6 +443,10 @@
 
 .amy-bio-text {
   margin: 0;
+  padding: 10px 12px;
+  border-left: 2px solid var(--amy-accent);
+  border-radius: 0 10px 10px 0;
+  background: linear-gradient(100deg, rgba(244, 239, 234, 0.92), rgba(244, 239, 234, 0.76));
   color: var(--amy-copy);
   font-weight: 450;
   text-shadow: 0 1px 10px rgba(244, 239, 234, 0.72);
@@ -452,6 +481,8 @@
   visibility: hidden;
 }
 .amy-intro-meta {
+  position: relative;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -475,6 +506,18 @@
 .amy-intro-phase-label {
   font: 500 11px / 1 'Inter', sans-serif;
   color: #d6c5cc;
+}
+.amy-intro-label-mobile {
+  display: none;
+}
+.amy-intro-progress {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 2px;
+  background: #e7aabb;
+  transform: scaleX(var(--hero-progress));
+  transform-origin: left;
 }
 .amy-intro-actions {
   display: flex;
@@ -538,6 +581,30 @@
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+}
+.amy-scroll-cue {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  z-index: 8;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #fff4f7;
+  text-shadow: 0 1px 5px #08070a;
+  font: 600 11px / 1.4 'Inter', sans-serif;
+  letter-spacing: 0.06em;
+  opacity: var(--reveal);
+  pointer-events: none;
+}
+.amy-scroll-cue span {
+  color: #efbbca;
+  font-size: 18px;
+}
+.amy-stage:not([data-phase='settled']) .amy-scroll-cue,
+.amy-stage[data-zoomed='true'] .amy-scroll-cue {
+  visibility: hidden;
 }
 
 /* Fullscreen Glasses Re-entry overlay */
@@ -627,6 +694,9 @@
 .amy-hero[data-portrait-error='true'] .amy-col-copy,
 .amy-hero[data-portrait-error='true'] .amy-bio-text {
   text-shadow: 0 1px 10px rgba(8, 7, 10, 0.85);
+}
+.amy-hero[data-portrait-error='true'] .amy-bio-text {
+  background: none;
 }
 
 /* Competitive Mode (body.comp-mode) — legible red accents while preserving portrait and Platino #2ee6a8 */
@@ -772,6 +842,10 @@ body.comp-mode .amy-media-notice button:hover {
     margin: 0;
   }
   .amy-bio-text {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
     max-width: 24ch;
     font-size: 11.75px;
     line-height: 1.34;
@@ -835,7 +909,12 @@ body.comp-mode .amy-media-notice button:hover {
   .amy-controls button {
     padding: 7px 10px;
     font-size: 10px;
-    min-height: 40px;
+    min-height: 44px;
+  }
+  .amy-scroll-cue {
+    bottom: 6px;
+    font-size: 10px;
+    gap: 6px;
   }
 
   /* Intro peripheral bar on mobile */
@@ -847,13 +926,20 @@ body.comp-mode .amy-media-notice button:hover {
     gap: 8px;
   }
   .amy-intro-phase-label {
+    display: inline;
+    font-size: 10px;
+  }
+  .amy-intro-label-desktop {
     display: none;
+  }
+  .amy-intro-label-mobile {
+    display: inline;
   }
   .amy-intro-actions button,
   .amy-intro-actions .amy-intro-link {
     padding: 8px 11px;
     font-size: 10.5px;
-    min-height: 40px;
+    min-height: 44px;
   }
 }
 
@@ -869,7 +955,7 @@ body.comp-mode .amy-media-notice button:hover {
   .amy-controls button {
     padding: 6px 8.5px;
     font-size: 9.5px;
-    min-height: 38px;
+    min-height: 44px;
   }
 }
 

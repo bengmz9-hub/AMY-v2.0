@@ -223,6 +223,7 @@ export default function Hero() {
       stage.current.style.setProperty('--lens-settle', lensSettle.toFixed(4));
       stage.current.style.setProperty('--reveal', reveal.toFixed(4));
       stage.current.style.setProperty('--intro-fade', introFade.toFixed(4));
+      stage.current.style.setProperty('--hero-progress', progress.toFixed(4));
       stage.current.style.setProperty('--wipe', '0.0000');
       stage.current.dataset.phase = nextPhase;
       stage.current.dataset.progress = progress.toFixed(4);
@@ -419,7 +420,7 @@ export default function Hero() {
     probe.onerror = () => {
       if (active) setPortraitError(true);
     };
-    probe.src = asset('amy-hero-ultrawide-v2.png');
+    probe.src = asset('amy-hero-ultrawide-v2.webp');
     return () => {
       active = false;
     };
@@ -744,19 +745,19 @@ export default function Hero() {
                   aria-hidden="true"
                 >
                   <image
-                    href={asset('amy-hero-ultrawide-v2.png')}
+                    href={asset('amy-hero-ultrawide-v2.webp')}
                     width={lens.width}
                     height={lens.height}
                   />
                 </svg>
                 <image
-                  href={asset('amy-hero-ultrawide-v2.png')}
+                  href={asset('amy-hero-ultrawide-v2.webp')}
                   width={lens.width}
                   height={lens.height}
                   onError={() => setPortraitError(true)}
                 />
                 <image
-                  href={asset('amy-hero-ultrawide-v4-refined.png')}
+                  href={asset('amy-hero-ultrawide-v4-refined.webp')}
                   width={lens.width}
                   height={lens.height}
                   preserveAspectRatio="none"
@@ -877,7 +878,9 @@ export default function Hero() {
             className="amy-lens-trigger"
             aria-label="Ampliar vídeo de Valorant en las gafas de AMY"
             onClick={openGlassesView}
-          />
+          >
+            <span className="amy-lens-hint" aria-hidden="true">Ver gameplay ↗</span>
+          </button>
 
           {/* Settled Hero content: two balanced narrow side columns on desktop; upper bio+signature row & compact Sage dock on mobile */}
           <div ref={copy} className="amy-reveal">
@@ -887,7 +890,7 @@ export default function Hero() {
                   <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  3 -3 0 0 -0.15" />
                 </filter>
               </defs>
-              <image href={asset('amy-hero-ultrawide-v2.png')} width={lens.width} height={lens.height} filter={`url(#${id}-valorant-ink)`} />
+              <image href={asset('amy-hero-ultrawide-v2.webp')} width={lens.width} height={lens.height} filter={`url(#${id}-valorant-ink)`} />
             </svg>
 
             <div className="amy-col-left">
@@ -965,8 +968,10 @@ export default function Hero() {
               AMY <span>/ VALORANT</span>
             </span>
             <span className="amy-intro-phase-label">
-              Desliza para conocer a AMY ↓
+              <span className="amy-intro-label-desktop">Desliza para conocer a AMY</span>
+              <span className="amy-intro-label-mobile">Desliza</span> ↓
             </span>
+            <span className="amy-intro-progress" aria-hidden="true" />
           </div>
           <div className="amy-intro-actions">
             <button className="amy-skip" type="button" onClick={skipIntro}>
@@ -994,6 +999,9 @@ export default function Hero() {
           <button className="amy-replay" type="button" onClick={replay}>
             Repetir intro ↺
           </button>
+        </div>
+        <div className="amy-scroll-cue" aria-hidden="true">
+          Continúa <span>↓</span>
         </div>
 
         {/* Fullscreen Glasses Re-entry overlay controls */}
