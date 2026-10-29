@@ -360,10 +360,12 @@
 }
 
 .grow-card-title {
-  font-family: 'Cinzel', serif;
-  font-size: 17px;
-  font-weight: 700;
+  font-family: 'Qadone', sans-serif;
+  font-size: 18.5px;
+  font-weight: 400;
+  font-synthesis: none;
   letter-spacing: 0.02em;
+  text-transform: uppercase;
   color: #ffffff;
   line-height: 1.2;
   margin: 0;
@@ -521,7 +523,7 @@
   }
 
   .grow-card-title {
-    font-size: 15px;
+    font-size: 16px;
   }
 
   .grow-card-desc {
