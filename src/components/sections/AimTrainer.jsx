@@ -1,5 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 
+const HITMARKER_COLOR = '#ffffff';
+const HITMARKER_LINE_WIDTH = 1.5;
+const HITMARKER_SIZE = 6;
+
+const GAME_DURATION = 15;
+const TARGET_SPAWN_MARGIN = 30;
+const RETICLE_SIZE = 10;
+const RETICLE_GAP = 4;
+const RETICLE_LINE_WIDTH = 1.5;
+const RETICLE_DOT_RADIUS = 1.5;
+const FLOATING_TEXT_OFFSET_Y = 20;
+
 export default function AimTrainer() {
   const canvasRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -12,7 +24,7 @@ export default function AimTrainer() {
     isPlaying: false,
     hits: 0,
     totalClicks: 0,
-    timeLeft: 10,
+    timeLeft: GAME_DURATION,
     posX: 400,
     posY: 200,
     targetX: 400,
@@ -33,7 +45,7 @@ export default function AimTrainer() {
   };
 
   const spawnTarget = (width, height) => {
-    const margin = 30;
+    const margin = TARGET_SPAWN_MARGIN;
     gameState.current.targetX = margin + Math.random() * (width - margin * 2);
     gameState.current.targetY = margin + Math.random() * (height - margin * 2);
   };
@@ -145,9 +157,9 @@ export default function AimTrainer() {
         } else {
           ctx.save();
           ctx.globalAlpha = hm.alpha;
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 1.5;
-          const hs = 6;
+          ctx.strokeStyle = HITMARKER_COLOR;
+          ctx.lineWidth = HITMARKER_LINE_WIDTH;
+          const hs = HITMARKER_SIZE;
           ctx.beginPath();
           ctx.moveTo(hm.x - hs, hm.y - hs);
           ctx.lineTo(hm.x + hs, hm.y + hs);
@@ -161,9 +173,9 @@ export default function AimTrainer() {
 
     // Retícula / Mira del usuario
     ctx.strokeStyle = accent;
-    ctx.lineWidth = 1.5;
-    const s = 10;
-    const g = 4;
+    ctx.lineWidth = RETICLE_LINE_WIDTH;
+    const s = RETICLE_SIZE;
+    const g = RETICLE_GAP;
 
     ctx.beginPath();
     ctx.moveTo(st.posX - s, st.posY);
@@ -178,7 +190,7 @@ export default function AimTrainer() {
 
     ctx.fillStyle = accent;
     ctx.beginPath();
-    ctx.arc(st.posX, st.posY, 1.5, 0, Math.PI * 2);
+    ctx.arc(st.posX, st.posY, RETICLE_DOT_RADIUS, 0, Math.PI * 2);
     ctx.fill();
   };
 
@@ -204,14 +216,14 @@ export default function AimTrainer() {
     if (!canvas) return;
     const st = gameState.current;
     st.isPlaying = true;
-    st.timeLeft = 15;
+    st.timeLeft = GAME_DURATION;
     st.hits = 0;
     st.totalClicks = 0;
     st.particles = [];
     st.floatingTexts = [];
     st.hitmarkers = [];
 
-    setTimeLeft(15);
+    setTimeLeft(GAME_DURATION);
     setHits(0);
     setTotalClicks(0);
     setIsPlaying(true);
@@ -256,10 +268,10 @@ export default function AimTrainer() {
       if (!st.hitmarkers) st.hitmarkers = [];
       st.hitmarkers.push({ x: st.posX, y: st.posY, alpha: 1 });
       createExplosion(st.targetX, st.targetY, accentColor);
-      spawnFloatingText(st.targetX, st.targetY - 20, '+1', '#ffffff');
+      spawnFloatingText(st.targetX, st.targetY - FLOATING_TEXT_OFFSET_Y, '+1', '#ffffff');
       if (canvas) spawnTarget(canvas.width, canvas.height);
     } else {
-      spawnFloatingText(st.posX, st.posY - 20, 'MISS', '#ff4655');
+      spawnFloatingText(st.posX, st.posY - FLOATING_TEXT_OFFSET_Y, 'MISS', '#ff4655');
     }
 
     triggerAnimation();
