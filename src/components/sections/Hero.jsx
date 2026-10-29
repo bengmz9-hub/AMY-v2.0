@@ -817,48 +817,7 @@ export default function Hero() {
               aria-hidden="true"
             />
 
-            <div className="amy-col-left">
-              <a
-                ref={(node) => {
-                  clips.current = node;
-                  sageCard.current = node;
-                }}
-                href="#shorts"
-                className="amy-sage-card"
-                aria-label="Sage, agente principal de AMY en Valorant — Ver clips"
-                onPointerMove={onSagePointerMove}
-                onPointerLeave={onSagePointerLeave}
-              >
-                <div className="amy-sage-tilt">
-                  <div className="amy-sage-art">
-                    <img
-                      src={asset('sage-wallpaper.jpg')}
-                      width="405"
-                      height="728"
-                      alt="Sage, el personaje principal de AMY en Valorant"
-                      decoding="async"
-                      onError={(event) => {
-                        event.currentTarget.style.visibility = 'hidden';
-                      }}
-                    />
-                    <div className="amy-sage-sheen" aria-hidden="true" />
-                    <div className="amy-sage-holo" aria-hidden="true" />
-                    <div className="amy-sage-meta">
-                      <span className="amy-sage-tag">
-                        <i aria-hidden="true" />
-                        Sage · Main
-                      </span>
-                      <span className="amy-sage-cta">
-                        Ver clips <span aria-hidden="true">↗</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </a>
-              <p className="amy-col-copy">{SAGE_COPY}</p>
-            </div>
-
-            <aside className="amy-col-right" aria-label="Conoce a AMY">
+            <aside className="amy-col-left" aria-label="Conoce a AMY">
               <div className="amy-signature-wrap">
                 <AmySignature
                   key={signatureKey}
@@ -882,6 +841,48 @@ export default function Hero() {
                 </span>
               </p>
             </aside>
+
+            <div className="amy-col-right">
+              <a
+                ref={(node) => {
+                  clips.current = node;
+                  sageCard.current = node;
+                }}
+                href="#shorts"
+                className="amy-sage-card"
+                aria-label="Sage, agente principal de AMY en Valorant — Ver clips"
+                onPointerMove={onSagePointerMove}
+                onPointerLeave={onSagePointerLeave}
+              >
+                <div className="amy-sage-tilt">
+                  <div className="amy-sage-aura" aria-hidden="true" />
+                  <div className="amy-sage-art">
+                    <img
+                      src={asset('sage-mystic-portrait.jpg')}
+                      width="512"
+                      height="1024"
+                      alt="Sage, el personaje principal de AMY en Valorant"
+                      decoding="async"
+                      onError={(event) => {
+                        event.currentTarget.style.visibility = 'hidden';
+                      }}
+                    />
+                    <div className="amy-sage-sheen" aria-hidden="true" />
+                    <div className="amy-sage-holo" aria-hidden="true" />
+                    <div className="amy-sage-meta">
+                      <span className="amy-sage-tag">
+                        <i aria-hidden="true" />
+                        Sage · Main
+                      </span>
+                      <span className="amy-sage-cta">
+                        Ver clips <span aria-hidden="true">↗</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </a>
+              <p className="amy-col-copy">{SAGE_COPY}</p>
+            </div>
           </div>
         </div>
 

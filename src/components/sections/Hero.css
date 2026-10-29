@@ -333,7 +333,7 @@
   pointer-events: none;
 }
 
-/* Desktop two narrow balanced side columns (21ch) */
+/* Desktop side columns: narrow bio on the left, expanded Sage showcase on the right */
 .amy-col-left,
 .amy-col-right {
   position: absolute;
@@ -348,18 +348,20 @@
 }
 .amy-col-left {
   left: max(clamp(154px, 10.8vw, 192px), calc(1.35vw + 81.5dvh * 118 / 672 + 16px));
-  bottom: clamp(12%, calc(15vh + 32px), 23%);
 }
 .amy-col-right {
-  right: clamp(28px, 6vw, 88px);
+  right: clamp(28px, 5.2vw, 84px);
+  bottom: clamp(10.5%, calc(12vh + 28px), 18.5%);
+  width: clamp(216px, 17.5vw, 252px);
   transition-delay: 75ms;
 }
 
-/* Sage collectible: turquoise foil, beveled lower edge and the existing portrait/tilt. */
+/* Rectangular Sage portrait card with subtle, minimal mystic jade aura */
 .amy-sage-card {
   --sage-foil: #58dbc3;
+  position: relative;
   display: block;
-  width: min(144px, 100%);
+  width: min(216px, 100%);
   margin: 0 0 16px;
   text-decoration: none;
   color: #f4f4f5;
@@ -373,113 +375,153 @@
     rotateX(var(--card-rx, 0deg))
     rotateY(var(--card-ry, 0deg))
     scale(var(--card-scale, 1));
-  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
+/* Subtle atmospheric ivory-jade halo & orb aura behind the rectangular frame */
+.amy-sage-aura {
+  position: absolute;
+  inset: -14px -12px;
+  z-index: 0;
+  border-radius: 26px;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 76% 48% at 50% 18%, rgba(246, 255, 252, 0.82) 0%, rgba(132, 242, 220, 0.34) 52%, transparent 78%),
+    radial-gradient(ellipse 70% 42% at 50% 78%, rgba(92, 232, 198, 0.36) 0%, rgba(245, 238, 228, 0.2) 56%, transparent 80%);
+  filter: blur(18px);
+  opacity: 0.86;
+  animation: amy-sage-aura-breathe 5.2s ease-in-out infinite alternate;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.amy-sage-card:hover .amy-sage-aura {
+  opacity: 1;
+  transform: scale(1.035);
+}
+@keyframes amy-sage-aura-breathe {
+  from {
+    opacity: 0.72;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 0.96;
+    transform: scale(1.02);
+  }
+}
+.amy-hero[data-paused='true'] .amy-sage-aura,
+.amy-hero[data-static='true'] .amy-sage-aura {
+  animation-play-state: paused;
+}
+
 .amy-sage-art {
   position: relative;
-  overflow: hidden;
-  aspect-ratio: 1036 / 1519;
-  border-radius: 4% / 2.73%;
-  border: 1px solid #b4f8e8;
-  background:
-    radial-gradient(ellipse at 0% 86%, #f0fff8 0%, #b8ffe5 3%, #62e8ce 8%, transparent 24%),
-    linear-gradient(53deg, transparent 8%, #d4ffeb 9%, #47c4b2 11%, transparent 13% 21%, #bdffe9 22%, transparent 25%),
-    linear-gradient(135deg, #d5fff0 0%, #2a8f83 16%, #77e5ca 34%, #176b64 54%, #a2f9da 77%, #40baa8 100%);
-  box-shadow:
-    0 18px 38px -16px rgba(14, 9, 14, 0.62),
-    0 0 0 1px rgba(232, 255, 245, 0.65) inset,
-    0 0 12px -6px rgba(88, 219, 195, 0.7);
-}
-.amy-sage-art::before {
-  content: '';
-  position: absolute;
-  inset: 4px;
   z-index: 1;
-  border: 1px solid rgba(14, 67, 60, 0.7);
-  border-radius: 2px;
-  box-shadow: 0 0 0 1px rgba(218, 255, 237, 0.45);
-  pointer-events: none;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 10 / 16.4;
+  border-radius: 16px;
+  padding: 1.5px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(164, 242, 225, 0.72) 38%,
+    rgba(222, 213, 200, 0.85) 72%,
+    rgba(122, 236, 208, 0.82) 100%
+  );
+  box-shadow:
+    0 18px 38px -14px rgba(34, 25, 32, 0.28),
+    0 0 28px -4px rgba(176, 250, 234, 0.52),
+    0 1px 0 0 rgba(255, 255, 255, 0.85) inset;
 }
 .amy-sage-art::after {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: 1.5px;
   z-index: 2;
-  clip-path: polygon(0 84%, 17% 84%, 29% 94%, 100% 94%, 100% 100%, 0 100%);
-  background:
-    linear-gradient(55deg, transparent 9%, #e6fff3 10%, #6cddc5 12%, transparent 14% 22%, #bdffe7 23%, transparent 26%),
-    linear-gradient(115deg, #a9ffe1, #38b6a5 18%, #186e65 36%, #7eeacf 62%, #ddfff0 91%, #55d0b7);
+  border-radius: 14.5px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.48),
+    inset 0 12px 24px -10px rgba(255, 255, 255, 0.35);
   pointer-events: none;
 }
 .amy-sage-art img {
   position: absolute;
-  inset: 5px;
+  inset: 1.5px;
   display: block;
-  width: calc(100% - 10px);
-  height: calc(100% - 10px);
-  border-radius: 2px;
+  width: calc(100% - 3px);
+  height: calc(100% - 3px);
+  border-radius: 14.5px;
   object-fit: cover;
-  object-position: center 15%;
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  object-position: center 7%;
+  background: #dfd7cc;
+  transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .amy-sage-card:hover .amy-sage-art img {
   transform: scale(1.03);
 }
 .amy-sage-sheen {
   position: absolute;
-  inset: 0;
+  inset: 1.5px;
+  z-index: 2;
+  border-radius: 14.5px;
+  pointer-events: none;
+  background: radial-gradient(
+    220px circle at calc(var(--card-mxf, 0.5) * 100%) calc(var(--card-myf, 0.35) * 100%),
+    rgba(255, 255, 255, 0.38) 0%,
+    rgba(130, 245, 222, 0.16) 44%,
+    transparent 72%
+  );
+  mix-blend-mode: screen;
+  opacity: calc(0.95 * var(--card-hover, 0));
+  transition: opacity 0.28s ease;
+}
+.amy-sage-holo {
+  position: absolute;
+  inset: 1.5px;
+  z-index: 2;
+  border-radius: 14.5px;
   pointer-events: none;
   background: linear-gradient(
-    105deg,
+    115deg,
     transparent 34%,
-    rgba(176, 255, 226, 0.24) 46%,
-    rgba(241, 255, 249, 0.58) 50%,
-    rgba(88, 219, 195, 0.28) 54%,
+    rgba(220, 255, 246, 0.28) 47%,
+    rgba(255, 255, 255, 0.52) 50%,
+    rgba(130, 240, 218, 0.24) 53%,
     transparent 66%
   );
   background-size: 240% 100%;
   background-position-x: calc(var(--card-mxf, 0.5) * 100%);
   mix-blend-mode: screen;
   opacity: calc(0.75 * var(--card-hover, 0));
-  transition: opacity 0.25s ease;
-}
-.amy-sage-holo {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    120deg,
-    rgba(88, 219, 195, 0.28) 0%,
-    rgba(182, 255, 227, 0.16) 38%,
-    rgba(255, 255, 255, 0) 58%,
-    rgba(46, 230, 168, 0.16) 100%
-  );
-  mix-blend-mode: color-dodge;
-  opacity: calc(0.65 * var(--card-hover, 0));
   transition: opacity 0.28s ease;
 }
 .amy-sage-meta {
   position: absolute;
-  inset-inline: 5px;
-  bottom: 5px;
+  inset-inline: 1.5px;
+  bottom: 1.5px;
+  z-index: 3;
+  border-radius: 0 0 14.5px 14.5px;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 5px;
-  padding: 25px 8px calc(22% + 4px);
-  background: linear-gradient(180deg, transparent 0%, rgba(10, 8, 12, 0.82) 58%, rgba(10, 8, 12, 0.94) 100%);
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 26px 12px 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(228, 220, 210, 0) 0%,
+    rgba(235, 228, 218, 0.84) 52%,
+    rgba(242, 236, 228, 0.96) 100%
+  );
   font: 600 10.5px / 1.2 'Inter', sans-serif;
 }
 .amy-sage-tag {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-family: 'Rajdhani', sans-serif;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: #f4f4f5;
+  color: var(--color-ink-deep);
   white-space: nowrap;
 }
 .amy-sage-tag i {
@@ -487,27 +529,27 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #2ee6a8;
-  box-shadow: 0 0 8px #2ee6a880;
+  background: #14b888;
+  box-shadow: 0 0 8px #2ee6a8;
 }
 .amy-sage-cta {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 4px 8px;
+  padding: 4px 9px;
   border-radius: 999px;
-  background: rgba(38, 126, 113, 0.4);
-  border: 1px solid rgba(126, 234, 207, 0.65);
+  background: rgba(23, 18, 32, 0.84);
+  border: 1px solid rgba(46, 230, 168, 0.65);
   color: #f4f4f5;
   font-size: 10px;
   font-weight: 600;
   white-space: nowrap;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 .amy-sage-card:hover .amy-sage-cta {
-  background: var(--sage-foil);
-  border-color: var(--sage-foil);
-  color: #092b26;
+  background: #176b64;
+  border-color: #9ef5df;
+  color: #ffffff;
 }
 
 .amy-col-copy {
@@ -841,11 +883,11 @@ body.comp-mode .amy-media-notice button:hover {
     width: 19ch;
   }
   .amy-col-right {
-    right: 4%;
-    width: 19ch;
+    right: 3.5%;
+    width: 210px;
   }
   .amy-sage-card {
-    width: 132px;
+    width: 196px;
   }
   .amy-signature {
     width: 168px;
@@ -872,7 +914,7 @@ body.comp-mode .amy-media-notice button:hover {
   }
 
   /* Upper row: biography on the left, signature on the right, inside the studio headroom above AMY's crown */
-  .amy-col-right {
+  .amy-col-left {
     top: 68px;
     bottom: auto;
     left: 4.5%;
@@ -906,10 +948,11 @@ body.comp-mode .amy-media-notice button:hover {
   }
 
   /* Smaller collectible portrait, below and to the side of AMY's 1847 tattoo. */
-  .amy-col-left {
+  .amy-col-right {
     left: calc(4% + 12px);
+    right: auto;
     bottom: 80px;
-    width: clamp(88px, 25vw, 104px);
+    width: clamp(92px, 25vw, 108px);
   }
   .amy-col-copy {
     display: none;
@@ -918,9 +961,21 @@ body.comp-mode .amy-media-notice button:hover {
     width: 100%;
     margin: 0;
   }
+  .amy-sage-art {
+    border-radius: 12px;
+  }
+  .amy-sage-art::after,
+  .amy-sage-art img,
+  .amy-sage-sheen,
+  .amy-sage-holo {
+    border-radius: 11px;
+  }
   .amy-sage-meta {
+    border-radius: 0 0 11px 11px;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 4px;
-    padding: 19px 5px calc(22% + 4px);
+    padding: 18px 6px 6px;
   }
   .amy-sage-tag {
     gap: 4px;
@@ -977,8 +1032,9 @@ body.comp-mode .amy-media-notice button:hover {
 
 /* Narrow viewports (e.g. 360px): ensure comfortable gap between Sage dock and bottom-right controls */
 @media (max-width: 400px) {
-  .amy-col-left {
+  .amy-col-right {
     left: calc(3% + 12px);
+    right: auto;
   }
   .amy-controls {
     right: 3%;
@@ -993,10 +1049,10 @@ body.comp-mode .amy-media-notice button:hover {
 
 /* Short landscape viewports on mobile (e.g. 700x480): place signature + bio on the upper-right pearl-grey studio backdrop */
 @media (max-width: 760px) and (max-height: 520px) {
-  .amy-col-left {
+  .amy-col-right {
     width: 82px;
   }
-  .amy-col-right {
+  .amy-col-left {
     top: 58px;
     bottom: auto;
     left: auto;
@@ -1030,11 +1086,11 @@ body.comp-mode .amy-media-notice button:hover {
   .amy-col-right {
     bottom: 10%;
   }
-  .amy-col-left {
+  .amy-col-right {
     bottom: calc(10% + 24px);
   }
   .amy-sage-card {
-    width: 124px;
+    width: 192px;
     margin-bottom: 12px;
   }
   .amy-signature {
