@@ -23,7 +23,6 @@ export default function Hero() {
   const id = `amy-${useId().replace(/[^a-z0-9-]/gi, '')}`;
   const runway = useRef(null);
   const stage = useRef(null);
-  const wipeLayer = useRef(null);
   const plane = useRef(null);
   const gameplayVideo = useRef(null);
   const aperture = useRef(null);
@@ -675,7 +674,7 @@ export default function Hero() {
           <span className="amy-backdrop-word">AMY</span>
         </div>
 
-        <div ref={wipeLayer} className="amy-wipe-scale">
+        <div className="amy-wipe-scale">
           <div className="amy-portrait-wrap">
             <div ref={plane} className="amy-portrait-plane">
               <img

@@ -142,7 +142,6 @@ const CONFIG = {
 
 const SLOTS = Array.from({ length: GROW_ITEMS.length * CONFIG.copies }, (_, slot) => ({
   slot,
-  itemIndex: slot % GROW_ITEMS.length,
   item: GROW_ITEMS[slot % GROW_ITEMS.length],
 }));
 
@@ -186,6 +185,7 @@ export default function AgentCarousel() {
     const progresses = new Float32Array(totalCards);
     const halfRooms = new Float32Array(totalCards);
     const itemWeights = new Float32Array(n);
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     let hoveredSlot = -1;
     let focusedSlot = -1;
@@ -219,6 +219,7 @@ export default function AgentCarousel() {
     let targetRaw = 0;
     let smoothedRaw = 0;
     let wipeInit = false;
+    const isInteractive = () => targetRaw >= 0.996 && smoothedRaw >= 0.996;
 
     const applyWipeState = (rawVal) => {
       const enter = smoothstep(rawVal);
@@ -252,20 +253,18 @@ export default function AgentCarousel() {
 
     const updateEnterBridge = () => {
       if (!sectionEl || !stageEl) return;
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const heroEl = document.getElementById('amy');
+      const staticEntrance = motionQuery.matches || heroEl?.dataset.static === 'true';
+      sectionEl.dataset.static = String(staticEntrance);
+      startLoop();
+      if (staticEntrance) {
         targetRaw = 1;
         smoothedRaw = 1;
-        sectionEl.style.setProperty('--enter', '1');
-        sectionEl.style.setProperty('--y-left', '-30%');
-        sectionEl.style.setProperty('--y-right', '-10%');
-        stageEl.dataset.visible = 'true';
-        stageEl.dataset.active = 'true';
-        stageEl.dataset.settled = 'true';
-        sectionEl.dataset.wiping = 'false';
+        wipeInit = true;
+        applyWipeState(1);
         return;
       }
 
-      const heroEl = document.getElementById('amy');
       const heroStage = heroEl?.querySelector('.amy-stage');
       const heroPhase = heroStage?.dataset.phase || heroEl?.dataset.phase;
 
@@ -297,11 +296,6 @@ export default function AgentCarousel() {
         smoothedRaw = targetRaw;
         wipeInit = true;
         applyWipeState(smoothedRaw);
-      } else if (Math.abs(targetRaw - smoothedRaw) > 0.0003) {
-        if (!rafId) {
-          lastTime = performance.now();
-          rafId = requestAnimationFrame(tick);
-        }
       }
     };
 
@@ -328,7 +322,7 @@ export default function AgentCarousel() {
     };
 
     const updateHoveredSlotFromPointer = (gap) => {
-      if (!pointerPos.active) {
+      if (focusedSlot !== -1 || !pointerPos.active) {
         hoveredSlot = focusedSlot;
         return;
       }
@@ -371,17 +365,17 @@ export default function AgentCarousel() {
     };
 
     const tick = (now) => {
+      rafId = 0;
       const wipingPending = Math.abs(targetRaw - smoothedRaw) > 0.0003;
       if (!isVisible && !wipingPending) {
-        rafId = 0;
         return;
       }
 
       const dt = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
 
-      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const lerpFactor = 1 - Math.pow(1 - CONFIG.lerpRate, dt * 60);
+      const reducedMotion = motionQuery.matches;
+      const lerpFactor = reducedMotion ? 1 : 1 - Math.pow(1 - CONFIG.lerpRate, dt * 60);
       const lerpWipe = 1 - Math.pow(1 - 0.085, dt * 60);
 
       if (!reducedMotion) {
@@ -393,7 +387,19 @@ export default function AgentCarousel() {
       }
 
       const { cardW, gap, step } = getCardMetrics();
-      updateHoveredSlotFromPointer(gap);
+      const interactive = isInteractive();
+      if (interactive) {
+        updateHoveredSlotFromPointer(gap);
+      } else {
+        // Keep hover stable while the scroll transform moves/clips the cards.
+        if (smoothedRaw <= 0.001) {
+          hoveredSlot = -1;
+          pointerPos.active = false;
+          pointerOverHud = false;
+          hoverPresence = 0;
+          progresses.fill(0);
+        }
+      }
 
       let targetVelocity = CONFIG.idleDriftPxPerSec;
       if (reducedMotion || pointerOverHud || focusedSlot !== -1) {
@@ -407,6 +413,7 @@ export default function AgentCarousel() {
 
       velocityPxPerSec += (targetVelocity - velocityPxPerSec) * lerpFactor;
 
+      if (reducedMotion) impulseOffset = 0;
       const impulseStep = impulseOffset * Math.min(1, dt * 8);
       impulseOffset -= impulseStep;
 
@@ -496,7 +503,7 @@ export default function AgentCarousel() {
         ambientEl.style.opacity = (1 - hoverPresence * 0.85).toFixed(3);
       }
 
-      rafId = requestAnimationFrame(tick);
+      if (!reducedMotion) rafId = requestAnimationFrame(tick);
     };
 
     const startLoop = () => {
@@ -509,19 +516,21 @@ export default function AgentCarousel() {
     const onPointerMove = (e) => {
       const target = e.target instanceof Element ? e.target : null;
       pointerOverHud = Boolean(target && target.closest('.grow-card-tactical'));
-      if (pointerPos.active && !pointerOverHud) {
+      if (pointerPos.active && !pointerOverHud && !motionQuery.matches) {
         const dx = e.clientX - pointerPos.x;
         impulseOffset += dx * CONFIG.mouseImpulseGain;
       }
       pointerPos.x = e.clientX;
       pointerPos.y = e.clientY;
       pointerPos.active = true;
+      startLoop();
     };
 
     const onPointerLeave = () => {
       pointerPos.active = false;
       pointerOverHud = false;
-      hoveredSlot = focusedSlot;
+      if (isInteractive()) hoveredSlot = focusedSlot;
+      startLoop();
     };
 
     const onFocusIn = (e) => {
@@ -530,7 +539,8 @@ export default function AgentCarousel() {
       const idx = cardRefs.current.indexOf(card);
       if (idx !== -1) {
         focusedSlot = idx;
-        hoveredSlot = idx;
+        if (isInteractive()) hoveredSlot = idx;
+        startLoop();
       }
     };
 
@@ -538,7 +548,8 @@ export default function AgentCarousel() {
       const next = e.relatedTarget instanceof Element ? e.relatedTarget.closest('.grow-card') : null;
       if (!next) {
         focusedSlot = -1;
-        if (!pointerPos.active) hoveredSlot = -1;
+        if (isInteractive() && !pointerPos.active) hoveredSlot = -1;
+        startLoop();
       }
     };
 
@@ -556,6 +567,7 @@ export default function AgentCarousel() {
     window.addEventListener('resize', updateEnterBridge);
     window.addEventListener('amy-hero-wipe', updateEnterBridge);
     window.addEventListener('amy-hero-phase', updateEnterBridge);
+    motionQuery.addEventListener('change', updateEnterBridge);
     stageEl.addEventListener('pointermove', onPointerMove, { passive: true });
     stageEl.addEventListener('pointerleave', onPointerLeave);
     trackEl.addEventListener('focusin', onFocusIn);
@@ -570,6 +582,7 @@ export default function AgentCarousel() {
       window.removeEventListener('resize', updateEnterBridge);
       window.removeEventListener('amy-hero-wipe', updateEnterBridge);
       window.removeEventListener('amy-hero-phase', updateEnterBridge);
+      motionQuery.removeEventListener('change', updateEnterBridge);
       stageEl.removeEventListener('pointermove', onPointerMove);
       stageEl.removeEventListener('pointerleave', onPointerLeave);
       trackEl.removeEventListener('focusin', onFocusIn);
