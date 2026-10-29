@@ -24,7 +24,7 @@ export default function Stats() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="stats-section" aria-label="Estadísticas de rendimiento y agentes">
+    <section id="stats" ref={sectionRef} className="stats-section" aria-label="Estadísticas de rendimiento y agentes">
       <h2 className="sr-only">Rendimiento táctico y agentes principales</h2>
       <div className="bento-grid">
         {STATS.map((stat, i) => (

@@ -1,5 +1,7 @@
-/* AMY Hero: reversible native scroll from fullscreen gameplay to the static AMY background. */
+/* AMY Hero: reversible native scroll from fullscreen gameplay to the JJettas portrait scene. */
 .amy-hero {
+  --color-sand: #d3c8ba;
+  --color-ink-deep: #171220;
   --hero-transition: 2.4;
   position: relative;
   width: 100%;
@@ -18,14 +20,14 @@
   overflow: clip;
   isolation: isolate;
   pointer-events: auto;
-  background: linear-gradient(90deg, #d3cdcb 0%, #e4ded8 50%, #c8c3c1 100%);
+  background: var(--color-sand);
   --reveal: 0;
   --intro-fade: 0;
   --hero-progress: 0;
   --lens-settle: 0;
   --wipe: 0;
   --mobile-headroom: 0px;
-  --amy-copy: #24191e;
+  --amy-copy: var(--color-ink-deep);
   --amy-emphasis: #874459;
   --amy-muted: #56434c;
   --amy-accent: #c07a8b;
@@ -36,6 +38,95 @@
 }
 .amy-stage[data-wipe='0.0000'] {
   pointer-events: auto;
+}
+
+/* Precomposited pebble/screen + soft-light wash, with two seamless stencil rows. */
+.bg-layers {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background-color: var(--color-sand);
+}
+.bg-layers__plate {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+.bg-layers__marquees {
+  position: absolute;
+  top: -6vh;
+  inset-inline: 0;
+  height: 112vh;
+  display: flex;
+  flex-direction: column;
+  gap: 2vh;
+  pointer-events: none;
+}
+.bg-layers__marquee {
+  position: relative;
+  flex: 0 0 55vh;
+  height: 55vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  mix-blend-mode: soft-light;
+}
+.bg-layers__track {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  width: max-content;
+  will-change: transform;
+}
+.bg-layers__track--top {
+  animation: bg-marquee-left 36s linear infinite;
+  animation-delay: -1.1s;
+}
+.bg-layers__track--bottom {
+  animation: bg-marquee-right 46s linear infinite;
+  animation-delay: -16.5s;
+}
+.bg-layers__word {
+  display: block;
+  flex: none;
+  height: 55vh;
+  margin-right: 3.5vw;
+  background-color: var(--color-ink-deep);
+  filter: blur(1px);
+  -webkit-mask-position: 50%;
+  mask-position: 50%;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  user-select: none;
+}
+.bg-layers__word--amy {
+  width: 179.868vh;
+  -webkit-mask-image: var(--mask-amy);
+  mask-image: var(--mask-amy);
+}
+.bg-layers__word--juarez {
+  width: 351.184vh;
+  -webkit-mask-image: var(--mask-juarez);
+  mask-image: var(--mask-juarez);
+}
+@keyframes bg-marquee-left {
+  from { transform: translate3d(0%, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+@keyframes bg-marquee-right {
+  from { transform: translate3d(-50%, 0, 0); }
+  to { transform: translate3d(0%, 0, 0); }
+}
+.amy-hero[data-paused='true'] .bg-layers__track,
+.amy-hero[data-static='true'] .bg-layers__track {
+  animation-play-state: paused;
 }
 
 /* Fallback backdrop used when portrait image fails to load */
@@ -90,7 +181,6 @@
   inset: 0;
   pointer-events: none;
   z-index: 2;
-  background: linear-gradient(90deg, #d3cdcb 0%, #e4ded8 50%, #c8c3c1 100%);
 }
 .amy-portrait-plane {
   position: absolute;
@@ -135,7 +225,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(180deg, #07090b55, transparent 45%, #07090b44);
+  background: linear-gradient(180deg, #07090b24, transparent 35% 70%, #07090b1f);
   opacity: var(--lens-settle, 0);
 }
 .amy-lens-screen::after {
@@ -232,19 +322,15 @@
 }
 
 .amy-valorant-margin {
-  display: none;
-  position: absolute;
-  left: 0;
-  top: 70px;
-  width: auto;
-  height: calc(100% - 110px);
-  aspect-ratio: 114 / 664;
-  overflow: hidden;
-  opacity: 0.85;
-  pointer-events: none;
-}
-.amy-stage[data-cropped='true'] .amy-valorant-margin {
   display: block;
+  position: absolute;
+  left: clamp(14px, 1.35vw, 28px);
+  top: 10.2%;
+  width: auto;
+  height: 81.5%;
+  aspect-ratio: 118 / 672;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 /* Desktop two narrow balanced side columns (21ch) */
@@ -261,7 +347,7 @@
   transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .amy-col-left {
-  left: max(clamp(100px, 9.5vw, 144px), calc((100dvh - 110px) * 0.154 + 16px));
+  left: max(clamp(154px, 10.8vw, 192px), calc(1.35vw + 81.5dvh * 118 / 672 + 16px));
   bottom: clamp(12%, calc(15vh + 32px), 23%);
 }
 .amy-col-right {
@@ -472,10 +558,7 @@
 
 .amy-bio-text {
   margin: 0;
-  padding: 10px 12px;
-  border-left: 2px solid var(--amy-accent);
-  border-radius: 0 10px 10px 0;
-  background: linear-gradient(100deg, rgba(244, 239, 234, 0.92), rgba(244, 239, 234, 0.76));
+  padding: 0;
   color: var(--amy-copy);
   font-weight: 450;
   text-shadow: 0 1px 10px rgba(244, 239, 234, 0.72);
@@ -752,59 +835,9 @@ body.comp-mode .amy-media-notice button:hover {
   background: #2b1015;
 }
 
-/* Unobtrusive Header in Hero context: keep central pill off AMY's forehead */
-.ac-nav.ac-nav--hero {
-  left: 0;
-  right: 0;
-  top: 0.75rem;
-  transform: none;
-  width: 100%;
-  max-width: none;
-  padding: 0 clamp(1rem, 4.5vw, 3.5rem);
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  pointer-events: none;
-}
-.ac-nav.ac-nav--hero > * {
-  pointer-events: auto;
-}
-.ac-nav.ac-nav--hero .ac-logo {
-  margin-right: auto;
-  padding: 0.42rem 0.95rem;
-  border-radius: 999px;
-  background: rgba(16, 14, 20, 0.74);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(244, 244, 245, 0.16);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-}
-.ac-nav.ac-nav--hero .ac-links {
-  padding: 0.2rem 0.35rem;
-  border-radius: 999px;
-  background: rgba(16, 14, 20, 0.74);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(244, 244, 245, 0.14);
-}
-.ac-nav.ac-nav--hero .ac-sep {
-  display: none;
-}
-.ac-nav.ac-nav--hero .ac-icon,
-.ac-nav.ac-nav--hero .ac-cta,
-.ac-nav.ac-nav--hero .ac-burger {
-  background: rgba(16, 14, 20, 0.74);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-color: rgba(244, 244, 245, 0.18);
-}
-
 /* Tablet / intermediate desktop */
 @media (max-width: 1080px) and (min-width: 761px) {
   .amy-col-left {
-    left: max(100px, 9.5%, calc((100dvh - 110px) * 0.154 + 16px));
     width: 19ch;
   }
   .amy-col-right {
@@ -829,8 +862,10 @@ body.comp-mode .amy-media-notice button:hover {
     font-size: 62vw;
   }
   .amy-valorant-margin {
+    left: 0;
     top: calc(var(--mobile-headroom) + 28px);
-    height: calc(100% - var(--mobile-headroom) - 120px);
+    width: clamp(24px, 8vw, 40px);
+    height: auto;
   }
   .amy-reveal::before {
     background: linear-gradient(180deg, transparent 72%, rgba(8, 7, 10, 0.65) 88%, #08070a 100%);

@@ -1,4 +1,4 @@
-import NavbarAceternity from '@/components/layout/NavbarAceternity.jsx';
+import NavbarJJettas from '@/components/layout/NavbarJJettas.jsx';
 import Footer from '@/components/layout/Footer.jsx';
 import Hero from '@/components/sections/Hero.jsx';
 import Stats from '@/components/sections/Stats.jsx';
@@ -16,7 +16,7 @@ export default function App() {
     <>
       <div id="scrollBar"></div>
 
-      <NavbarAceternity />
+      <NavbarJJettas />
 
       <main id="main" aria-label="Contenido principal">
         <Hero />

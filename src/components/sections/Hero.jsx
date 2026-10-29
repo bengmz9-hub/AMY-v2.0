@@ -55,6 +55,7 @@ export default function Hero() {
   const [zoomed, setZoomed] = useState(false);
   const [signatureKey, setSignatureKey] = useState(0);
   const [status, setStatus] = useState('loading');
+  const [portraitFormat, setPortraitFormat] = useState('webp');
   const [portraitError, setPortraitError] = useState(false);
   const [reduced, setReduced] = useState(() =>
     typeof window !== 'undefined'
@@ -410,22 +411,6 @@ export default function Hero() {
     staticScene,
   ]);
 
-  // Probe canonical portrait image so network failure triggers fallback reliably across browsers
-  useEffect(() => {
-    let active = true;
-    const probe = new Image();
-    probe.onload = () => {
-      if (active) setPortraitError(false);
-    };
-    probe.onerror = () => {
-      if (active) setPortraitError(true);
-    };
-    probe.src = asset('amy-hero-ultrawide-v2.webp');
-    return () => {
-      active = false;
-    };
-  }, []);
-
   // Codec fallback handlers (AV1 WebM -> H.264 MP4 once -> error, preventing fallback loops)
   const onGameplayError = () => {
     if (gameplayCodec === 'av1') {
@@ -649,6 +634,41 @@ export default function Hero() {
       </h1>
 
       <div ref={stage} className="amy-stage">
+        <div
+          className="bg-layers"
+          aria-hidden="true"
+          style={{
+            // Custom-property URLs resolve at their CSS use site; anchor them to the page,
+            // not the bundled stylesheet directory, including when hosted in a subpath.
+            '--mask-amy': `url("${new URL(asset('amy.svg'), document.baseURI).href}")`,
+            '--mask-juarez': `url("${new URL(asset('juarez.svg'), document.baseURI).href}")`,
+          }}
+        >
+          <img
+            className="bg-layers__plate"
+            src={asset('jjettas-pebble-light-plate.webp')}
+            alt=""
+            width="1915"
+            height="821"
+            onError={(event) => { event.currentTarget.style.visibility = 'hidden'; }}
+          />
+          <div className="bg-layers__marquees">
+            <div className="bg-layers__marquee">
+              <div className="bg-layers__track bg-layers__track--top">
+                {Array.from({ length: 6 }, (_, index) => (
+                  <span key={index} className="bg-layers__word bg-layers__word--amy" />
+                ))}
+              </div>
+            </div>
+            <div className="bg-layers__marquee">
+              <div className="bg-layers__track bg-layers__track--bottom">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <span key={index} className="bg-layers__word bg-layers__word--juarez" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
         <div className="amy-backdrop" aria-hidden="true">
           <div
             className="amy-backdrop-texture"
@@ -660,108 +680,18 @@ export default function Hero() {
         <div ref={wipeLayer} className="amy-wipe-scale">
           <div className="amy-portrait-wrap">
             <div ref={plane} className="amy-portrait-plane">
-              <svg
+              <img
                 className="amy-portrait"
-                viewBox={`0 0 ${lens.width} ${lens.height}`}
-                role="img"
-                aria-label="AMY con gafas ámbar y chaqueta de cuero negro, integrada en un fondo gris perla con armas de Valorant en distintas direcciones"
-              >
-                <defs>
-                  <filter
-                    id={`${id}-face-blend`}
-                    filterUnits="userSpaceOnUse"
-                    x="808"
-                    y="162"
-                    width="278"
-                    height="202"
-                  >
-                    <feGaussianBlur stdDeviation="3" />
-                  </filter>
-                  <filter
-                    id={`${id}-neck-blend`}
-                    filterUnits="userSpaceOnUse"
-                    x="840"
-                    y="364"
-                    width="270"
-                    height="344"
-                  >
-                    <feGaussianBlur stdDeviation="4" />
-                  </filter>
-                  <mask
-                    id={`${id}-portrait-retouch`}
-                    maskUnits="userSpaceOnUse"
-                    x="0"
-                    y="0"
-                    width={lens.width}
-                    height={lens.height}
-                  >
-                    {/* Retouch only AMY; original glasses, features and tattoos stay underneath. */}
-                    <path
-                      fill="white"
-                      stroke="white"
-                      strokeWidth="32"
-                      strokeLinejoin="round"
-                      d="M956 20 C869 16 809 75 781 124 C737 201 720 277 692 357 C668 426 636 478 602 500 C552 542 526 621 502 700 L466 821 H1438 C1406 741 1376 660 1340 595 C1314 537 1284 500 1234 475 C1204 398 1189 286 1153 203 C1127 100 1082 20 1000 20 Z"
-                    />
-                    {/* Feather only the mask edges; keep the photo and facial features sharp. */}
-                    <path
-                      fill="black"
-                      filter={`url(#${id}-face-blend)`}
-                      d="M836 189 C888 177 1007 174 1051 188 Q1059 192 1061 209 Q1071 222 1059 233 L1056 258 Q1048 269 977 271 Q961 269 947 249 Q935 237 925 251 Q913 272 893 272 Q850 271 836 259 L832 233 Q823 222 833 211 Z"
-                    />
-                    <path
-                      fill="black"
-                      filter={`url(#${id}-face-blend)`}
-                      d="M933 265 Q919 271 917 287 Q922 299 943 301 Q965 298 973 286 Q970 274 956 265 Z"
-                    />
-                    <ellipse
-                      fill="black"
-                      filter={`url(#${id}-face-blend)`}
-                      cx="946"
-                      cy="326"
-                      rx="50"
-                      ry="20"
-                    />
-                    <path
-                      fill="black"
-                      filter={`url(#${id}-neck-blend)`}
-                      d="M893 382 L1027 382 L1048 462 L1085 523 L1086 583 L1045 672 L925 686 L871 617 L862 530 L887 472 Z"
-                    />
-                  </mask>
-                </defs>
-                {/* Seamless studio top extension for mobile headroom framing */}
-                <svg
-                  x="0"
-                  y="-260"
-                  width={lens.width}
-                  height="262"
-                  viewBox={`0 0 ${lens.width} 1`}
-                  preserveAspectRatio="none"
-                  aria-hidden="true"
-                >
-                  <image
-                    href={asset('amy-hero-ultrawide-v2.webp')}
-                    width={lens.width}
-                    height={lens.height}
-                  />
-                </svg>
-                <image
-                  href={asset('amy-hero-ultrawide-v2.webp')}
-                  width={lens.width}
-                  height={lens.height}
-                  onError={() => setPortraitError(true)}
-                />
-                <image
-                  href={asset('amy-hero-ultrawide-v4-refined.webp')}
-                  width={lens.width}
-                  height={lens.height}
-                  preserveAspectRatio="none"
-                  mask={`url(#${id}-portrait-retouch)`}
-                  onError={(event) => {
-                    event.currentTarget.style.display = 'none';
-                  }}
-                />
-              </svg>
+                src={asset(`amy-cutout.${portraitFormat}`)}
+                width="1915"
+                height="821"
+                alt="AMY con gafas ámbar y chaqueta de cuero negro"
+                decoding="async"
+                onError={() => {
+                  if (portraitFormat === 'webp') setPortraitFormat('png');
+                  else setPortraitError(true);
+                }}
+              />
             </div>
           </div>
 
@@ -806,20 +736,20 @@ export default function Hero() {
                 width="256"
                 height="121"
               >
-                <feGaussianBlur stdDeviation="2.8" />
+                <feGaussianBlur stdDeviation="0.9" />
               </filter>
               <linearGradient
                 id={`${id}-lens-top-shade`}
                 gradientUnits="userSpaceOnUse"
                 x1="946"
-                y1="185"
+                y1="184"
                 x2="946"
-                y2="266"
+                y2="268"
               >
-                <stop offset="0" stopColor="#050407" stopOpacity="0.58" />
-                <stop offset="0.3" stopColor="#050407" stopOpacity="0.14" />
-                <stop offset="0.68" stopColor="#050407" stopOpacity="0" />
-                <stop offset="1" stopColor="#050407" stopOpacity="0.34" />
+                <stop offset="0" stopColor="#050407" stopOpacity="0.18" />
+                <stop offset="0.22" stopColor="#050407" stopOpacity="0.04" />
+                <stop offset="0.78" stopColor="#050407" stopOpacity="0" />
+                <stop offset="1" stopColor="#050407" stopOpacity="0.12" />
               </linearGradient>
               <linearGradient
                 id={`${id}-lens-glare`}
@@ -851,8 +781,8 @@ export default function Hero() {
                 d={lens.aperture}
                 fill="none"
                 stroke="#050407"
-                strokeOpacity="0.72"
-                strokeWidth="10"
+                strokeOpacity="0.28"
+                strokeWidth="2.2"
                 filter={`url(#${id}-lens-edge-blur)`}
               />
             </g>
@@ -879,14 +809,14 @@ export default function Hero() {
 
           {/* Settled Hero content: two balanced narrow side columns on desktop; upper bio+signature row & compact Sage dock on mobile */}
           <div ref={copy} className="amy-reveal">
-            <svg className="amy-valorant-margin" viewBox="24 88 114 664" aria-hidden="true" focusable="false">
-              <defs>
-                <filter id={`${id}-valorant-ink`} x="24" y="88" width="114" height="664" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
-                  <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  3 -3 0 0 -0.15" />
-                </filter>
-              </defs>
-              <image href={asset('amy-hero-ultrawide-v2.webp')} width={lens.width} height={lens.height} filter={`url(#${id}-valorant-ink)`} />
-            </svg>
+            <img
+              className="amy-valorant-margin"
+              src={asset('valorant-vertical-red.png')}
+              width="118"
+              height="672"
+              alt=""
+              aria-hidden="true"
+            />
 
             <div className="amy-col-left">
               <a
