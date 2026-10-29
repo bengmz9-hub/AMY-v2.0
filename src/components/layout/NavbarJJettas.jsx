@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { PROFILE, SOCIAL_LINKS } from '@/data/profile.js';
 import './navbar-jjettas.css';
 
 const LINK_ROWS = [
@@ -15,11 +16,7 @@ const LINK_ROWS = [
   ],
 ];
 
-const SOCIALS = [
-  { label: 'TikTok', href: 'https://www.tiktok.com/@amyjgil', path: 'M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z' },
-  { label: 'YouTube', href: 'https://www.youtube.com/@AmyJGil', path: 'M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.38.55A3.02 3.02 0 0 0 .5 6.19 31.6 31.6 0 0 0 0 12a31.6 31.6 0 0 0 .5 5.81 3.02 3.02 0 0 0 2.12 2.14c1.88.55 9.38.55 9.38.55s7.5 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14A31.6 31.6 0 0 0 24 12a31.6 31.6 0 0 0-.5-5.81zM9.54 15.57V8.43L15.82 12l-6.28 3.57z' },
-  { label: 'Twitch', href: 'https://www.twitch.tv/amyjgil', path: 'M11.57 4.71h1.71v5.14h-1.71zm4.71 0H18v5.14h-1.72zM6 0L1.71 4.29v15.42h5.14V24l4.29-4.29h3.43L22.29 12V0zm14.57 11.14l-3.43 3.43h-3.43l-3 3v-3H6.86V1.71h13.71z' },
-];
+const SOCIALS = SOCIAL_LINKS;
 
 export default function NavbarJJettas() {
   const [open, setOpen] = useState(false);
@@ -194,9 +191,9 @@ export default function NavbarJJettas() {
         </div>
         <footer className="jj-overlay-footer">
           <div>© 2026 AMYJGIL <span className="jj-footer-sep">·</span> <span className="jj-footer-description">VALORANT CREATOR ECOSYSTEM</span></div>
-          <div className="jj-footer-status">STATUS // AGENT READY: SAGE LOCK-IN</div>
+          <div className="jj-footer-status">{PROFILE.statusText}</div>
           <div className="jj-footer-protocol">
-            <span>PROTOCOL: 128HZ · PLATINO 3</span>
+            <span>{PROFILE.protocolFooter}</span>
             <button type="button" className="jj-mode-btn" aria-pressed={isComp}
               aria-label={isComp ? 'Volver a modo normal' : 'Modo competitivo: textos en rojo'}
               title={isComp ? 'Modo normal' : 'Modo competitivo'} onClick={() => setIsComp((value) => !value)}>

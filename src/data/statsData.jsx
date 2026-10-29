@@ -1,6 +1,8 @@
-﻿export const STATS_DATA = [
+import { PROFILE } from '@/data/profile.js';
+
+export const STATS_DATA = [
   {
-    value: '2500+',
+    value: PROFILE.hoursPlayed,
     label: 'Horas Jugadas',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -12,16 +14,7 @@
     ),
   },
   {
-    value: '51%',
-    label: 'Win Rate',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-      </svg>
-    ),
-  },
-  {
-    value: 'Platino 3',
+    value: PROFILE.rank,
     label: 'Rango Actual',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

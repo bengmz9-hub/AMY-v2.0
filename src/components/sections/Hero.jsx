@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import lens from '@/data/heroLens.json';
+import { PROFILE } from '@/data/profile.js';
 import AmySignature from '@/components/ui/AmySignature.jsx';
 import './Hero.css';
 
@@ -10,10 +11,8 @@ const BACKGROUND_HOLD_MS = 3000;
 const transitionDistance = (runway, stage) => stage.offsetHeight *
   Number(getComputedStyle(runway).getPropertyValue('--hero-transition'));
 
-const SAGE_COPY =
-  'Main Sage en Platino 3. Dominio del control de terreno y soporte táctico en cada ronda.';
-const BIO_COPY =
-  'Soy AMY. Este es mi rincón de Valorant: clips y momentos dentro del juego.';
+const SAGE_COPY = PROFILE.sageCopy;
+const BIO_COPY = PROFILE.bioCopy;
 const BIO_WORDS = BIO_COPY.split(' ');
 
 const smoothstep = (value) => {
