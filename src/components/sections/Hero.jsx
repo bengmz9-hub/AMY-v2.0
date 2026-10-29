@@ -223,7 +223,12 @@ export default function Hero() {
       const dwellEnd = travel + dwell;
       // La transición diagonal solo existe desde el Hero background asentado (progress >= 1), nunca sobre el vídeo de intro.
       const targetWipe = staticScene || progress < 1 ? 0 : clamp((scroll - dwellEnd) / wipeSpan, 0, 1);
-      if (!wipeInitialized || staticScene || progress < 1) {
+      if (
+        !wipeInitialized ||
+        staticScene ||
+        progress < 1 ||
+        (targetWipe === 0 && smoothedWipe > 0.85)
+      ) {
         smoothedWipe = targetWipe;
         wipeInitialized = true;
       } else {
@@ -621,6 +626,7 @@ export default function Hero() {
       data-paused={isVideoPaused}
       data-portrait-error={portraitError}
     >
+      <div id="amy-home" className="amy-settled-anchor" aria-hidden="true" />
       <h1 id="amy-hero-title" className="sr-only">
         AMY — Valorant · Main Sage
       </h1>

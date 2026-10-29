@@ -4,7 +4,7 @@ import './navbar-jjettas.css';
 
 const LINK_ROWS = [
   [
-    { href: '#amy', label: 'Inicio' },
+    { href: '#amy-home', label: 'Inicio' },
     { href: '#agents', label: 'Especialidades' },
     { href: '#gear', label: 'Setup & Gear' },
     { href: '#sensCanvas', label: 'Aim Trainer' },
@@ -22,7 +22,7 @@ export default function NavbarJJettas() {
   const [open, setOpen] = useState(false);
   const [isComp, setIsComp] = useState(false);
   const [lightScene, setLightScene] = useState(false);
-  const [active, setActive] = useState('#amy');
+  const [active, setActive] = useState('#amy-home');
   const root = useRef(null);
   const trigger = useRef(null);
   const destination = useRef(null);
@@ -100,6 +100,7 @@ export default function NavbarJJettas() {
       const target = destination.current;
       destination.current = null;
       if (target) {
+        target.scrollIntoView({ block: 'start' });
         const tabIndex = target.getAttribute('tabindex');
         target.setAttribute('tabindex', '-1');
         target.addEventListener('blur', () => {
@@ -118,7 +119,7 @@ export default function NavbarJJettas() {
       const sections = LINK_ROWS.flat().filter((link) => !link.external)
         .map((link) => ({ href: link.href, top: document.querySelector(link.href)?.getBoundingClientRect().top }))
         .filter((section) => section.top <= 160).sort((a, b) => b.top - a.top);
-      setActive(sections[0]?.href || '#amy');
+      setActive(sections[0]?.href || '#amy-home');
     }
     setOpen((value) => !value);
   };
@@ -142,7 +143,7 @@ export default function NavbarJJettas() {
       onTouchStart={open ? (event) => event.stopPropagation() : undefined}
       onTouchMove={open ? (event) => event.stopPropagation() : undefined}>
       <header className="jj-header">
-        <a href="#amy" className="jj-brand-left" aria-label="AMY Inicio" onClick={navigate}>
+        <a href="#amy-home" className="jj-brand-left" aria-label="AMY Inicio" onClick={navigate}>
           <svg width="30" height="30" viewBox="0 0 36 36" fill="none" aria-hidden="true">
             <path d="M18 3L6 29L12.5 26L18 14.5L23.5 26L30 29L18 3Z" fill="currentColor" />
             <path d="M18 18.5L13.5 28L18 25.5L22.5 28L18 18.5Z" fill="#df303c" />

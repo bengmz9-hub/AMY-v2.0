@@ -117,7 +117,7 @@ function AgentCard({ agent }) {
 
 export default function Agents() {
   return (
-    <section id="agents">
+    <section id="agents-legacy">
       <div className="section-title fade-in-section">
         <WordReveal as="h2" parts={[{ t: 'Especialidades' }, { t: 'Tácticas', hl: true }]} />
         <p>Sinergia operativa con agentes de control y soporte.</p>

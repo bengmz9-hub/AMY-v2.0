@@ -1,13 +1,21 @@
 /* =========================================================================
    GROW CAROUSEL — Pantalla completa 100dvh debajo del Hero
-   Con Transición Agresiva JJettas (Diagonal Polygon Slash + Kinetic Sweep)
-   y Pausa Sticky de 140dvh
+   Con Transición Agresiva JJettas (Diagonal Polygon Slash + Kinetic Sweep),
+   Pausa Sticky de 140dvh y Especialidades Tácticas Fusionadas
    ========================================================================= */
+
+@font-face {
+  font-family: 'Qadone';
+  src: url('/assets/fonts/qadone.otf') format('opentype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
 
 .grow-carousel-section {
   --gc-card-w: clamp(360px, 26vw, 430px);
-  --gc-card-h: clamp(490px, 36vw, 580px);
-  --gc-card-gap: 10px;
+  --gc-card-h: clamp(500px, 37vw, 590px);
+  --gc-card-gap: 12px;
   --gc-card-radius: 18px;
   --gc-wipe-span: 1.85;
   --gc-dwell: 1.4;
@@ -26,13 +34,22 @@
   pointer-events: none;
 }
 
+.grow-carousel-anchor {
+  position: absolute;
+  top: calc(100dvh * var(--gc-wipe-span));
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
 /* ── Escena sticky 100dvh con recorte diagonal JJettas ───────────── */
 .grow-portal-frame {
   position: sticky;
   top: 0;
   width: 100%;
   height: 100dvh;
-  min-height: 620px;
+  min-height: 640px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -94,7 +111,7 @@
   width: 128%;
   height: 128%;
   object-fit: cover;
-  filter: blur(72px) saturate(1.42) brightness(0.58);
+  filter: blur(72px) saturate(1.42) brightness(0.54);
   transform: scale(1.18) translateZ(0);
   opacity: 0;
   will-change: opacity;
@@ -140,7 +157,7 @@
   position: relative;
   z-index: 3;
   text-align: center;
-  margin-bottom: clamp(20px, 3vh, 36px);
+  margin-bottom: clamp(16px, 2.4vh, 30px);
   padding: 0 20px;
   pointer-events: none;
   opacity: calc(var(--enter, 1));
@@ -176,10 +193,12 @@
 }
 
 .grow-title {
-  font-family: 'Cinzel', serif;
+  font-family: 'Qadone', sans-serif;
   font-size: clamp(1.85rem, 3.3vw, 2.75rem);
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-weight: 400;
+  font-synthesis: none;
+  letter-spacing: 0;
+  text-transform: uppercase;
   color: #f4f4f5;
   margin: 0;
 }
@@ -193,7 +212,7 @@
   position: relative;
   z-index: 2;
   width: 100%;
-  padding: 64px 0;
+  padding: 62px 0;
   overflow: visible;
   transform:
     translate3d(
@@ -218,6 +237,9 @@
 
 /* ── Tarjeta individual (Grow Card) ──────────────────────────────── */
 .grow-card {
+  --agent-accent: #2ee6a8;
+  --agent-ring-glow: rgba(46, 230, 168, 0.32);
+
   position: relative;
   flex: 0 0 var(--gc-card-w);
   width: var(--gc-card-w);
@@ -229,22 +251,22 @@
   will-change: transform, opacity, filter;
   transform-origin: center center;
   box-shadow:
-    0 22px 52px rgba(0, 0, 0, 0.52),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+    0 22px 52px rgba(0, 0, 0, 0.56),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14);
   outline: none;
 }
 
 .grow-card:focus-visible {
   box-shadow:
     0 26px 64px rgba(0, 0, 0, 0.75),
-    0 0 0 2px #2ee6a8;
+    0 0 0 2px var(--agent-accent);
 }
 
 .grow-card-media {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center;
+  object-position: center top;
   display: block;
   pointer-events: none;
   transform: scale(1.01);
@@ -256,32 +278,42 @@
   border-radius: var(--gc-card-radius);
   pointer-events: none;
   box-shadow:
-    inset 0 0 0 1.35px rgba(255, 214, 226, 0.42),
-    0 0 34px rgba(192, 122, 139, 0.28);
+    inset 0 0 0 1.6px var(--agent-accent),
+    0 0 36px var(--agent-ring-glow);
   opacity: 0;
-  z-index: 3;
+  z-index: 4;
 }
 
 .grow-card-badge {
   position: absolute;
   top: 14px;
   left: 14px;
-  z-index: 3;
-  padding: 4px 10px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
   border-radius: 999px;
-  background: rgba(10, 9, 14, 0.68);
+  background: rgba(10, 9, 14, 0.74);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   font-family: 'Rajdhani', sans-serif;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #f4f4f5;
-  opacity: 0;
-  transform: translateY(-6px);
+  opacity: 0.82;
   pointer-events: none;
+}
+
+.grow-card-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--agent-accent);
+  box-shadow: 0 0 8px var(--agent-accent);
 }
 
 .grow-card-shade {
@@ -289,59 +321,211 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(6, 5, 8, 0) 44%,
-    rgba(6, 5, 8, 0.56) 75%,
-    rgba(6, 5, 8, 0.9) 100%
+    rgba(6, 5, 8, 0) 24%,
+    rgba(8, 7, 11, 0.42) 52%,
+    rgba(8, 7, 11, 0.88) 76%,
+    rgba(8, 7, 11, 0.97) 100%
   );
-  opacity: 0;
+  opacity: 0.32;
   pointer-events: none;
   z-index: 2;
 }
 
+/* ── Caption + HUD de Especialidades Tácticas ────────────────────── */
 .grow-card-caption {
+  --p: 0;
+
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 3;
-  padding: 24px 18px 22px;
-  text-align: center;
+  padding: 18px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
   pointer-events: none;
-  opacity: 0;
-  transform: translate3d(0, 10px, 0);
-  will-change: opacity, transform;
+}
+
+.grow-card[data-expanded='true'] .grow-card-caption {
+  pointer-events: auto;
+}
+
+.grow-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .grow-card-title {
-  font-family: 'Inter', sans-serif;
-  font-size: 18px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  font-family: 'Cinzel', serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   color: #ffffff;
-  line-height: 1.22;
-  margin: 0 0 4px;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.72);
+  line-height: 1.2;
+  margin: 0;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.82);
 }
 
 .grow-card-sub {
-  font-family: 'Inter', sans-serif;
-  font-size: 12.5px;
-  font-weight: 400;
-  color: rgba(244, 244, 245, 0.68);
-  letter-spacing: 0.01em;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--agent-accent);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   margin: 0;
+  white-space: nowrap;
+}
+
+/* Bloque táctico desplegable al hacer hover/focus en la tarjeta */
+.grow-card-tactical {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  max-height: calc(var(--p, 0) * 260px);
+  opacity: clamp(0, calc((var(--p, 0) - 0.15) * 1.35), 1);
+  transform: translate3d(0, calc((1 - var(--p, 0)) * 12px), 0);
+  overflow: hidden;
+  will-change: max-height, opacity, transform;
+}
+
+.grow-card-desc {
+  font-family: 'Inter', sans-serif;
+  font-size: 11.5px;
+  line-height: 1.38;
+  color: rgba(244, 244, 245, 0.84);
+  margin: 0;
+}
+
+.grow-abilities-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 11px;
+  background: rgba(14, 13, 19, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+}
+
+.grow-ability-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+
+.grow-ability-tab {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(244, 244, 245, 0.78);
+  border-radius: 6px;
+  padding: 3px 0;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.grow-ability-tab:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.grow-ability-tab.is-active {
+  background: var(--agent-accent);
+  border-color: var(--agent-accent);
+  color: #09080c;
+  box-shadow: 0 0 12px var(--agent-ring-glow);
+}
+
+.grow-ability-detail {
+  min-height: 44px;
+}
+
+.grow-ability-name {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--agent-accent);
+  margin: 0 0 2px;
+}
+
+.grow-ability-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  line-height: 1.34;
+  color: rgba(244, 244, 245, 0.86);
+  margin: 0;
+}
+
+.grow-usage {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.grow-usage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(244, 244, 245, 0.82);
+}
+
+.grow-usage-head strong {
+  color: var(--agent-accent);
+  font-weight: 700;
+}
+
+.grow-usage-track {
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.grow-usage-fill {
+  height: 100%;
+  border-radius: 999px;
 }
 
 @media (max-width: 768px) {
   .grow-carousel-section {
-    --gc-card-w: 256px;
-    --gc-card-h: 356px;
-    --gc-card-gap: 8px;
-    min-height: 540px;
+    --gc-card-w: 286px;
+    --gc-card-h: 430px;
+    --gc-card-gap: 10px;
+    min-height: 560px;
   }
 
   .grow-viewport {
-    padding: 44px 0;
+    padding: 40px 0;
+  }
+
+  .grow-card-title {
+    font-size: 15px;
+  }
+
+  .grow-card-desc {
+    display: none;
   }
 }
 
@@ -350,6 +534,10 @@
     margin-top: 0;
     height: auto;
     pointer-events: auto;
+  }
+
+  .grow-carousel-anchor {
+    top: 0;
   }
 
   .grow-portal-frame {

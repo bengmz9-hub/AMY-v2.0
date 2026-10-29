@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { AGENTS_DATA } from '@/data/agentsData.js';
 import './GrowCarousel.css';
 
 const asset = (name) => `${import.meta.env.BASE_URL}assets/imagenes/${name}`;
@@ -8,75 +9,135 @@ const smoothstep = (v) => {
   return t * t * (3 - 2 * t);
 };
 
-const GROW_ITEMS = [
-  {
-    id: 'sage-mystic',
+const AGENT_META = {
+  sage: {
     title: 'Sage // Orbe Místico',
     subtitle: 'Main Sentinel · 45% Uso',
-    badge: 'AGENT // 07',
+    badge: 'SENTINEL // MAIN · 45%',
     img: asset('sage-mystic-portrait.jpg'),
-    fallbackBg: 'radial-gradient(circle at 50% 35%, #8fd6c4 0%, #2d5a52 55%, #0c1414 100%)',
+    accent: '#2ee6a8',
+    ringGlow: 'rgba(46, 230, 168, 0.34)',
+    fallbackBg: 'radial-gradient(circle at 50% 35%, #e5dfd3 0%, #2d5a52 62%, #0c1414 100%)',
   },
-  {
-    id: 'amy-clutch',
-    title: 'Clutch & Aim Control',
-    subtitle: 'The Amy Show · Gameplay',
-    badge: 'CLIP // VALORANT',
-    img: asset('amy-hero-gameplay-flat-crt-poster.jpg'),
-    fallbackBg: 'radial-gradient(circle at 50% 40%, #c07a8b 0%, #48212d 55%, #12090d 100%)',
-  },
-  {
-    id: 'gekko-wingman',
+  gekko: {
     title: 'Gekko // Wingman',
     subtitle: 'Initiator · 35% Uso',
     badge: 'INITIATOR // 35%',
-    img: asset('gekko-wallpaper.jpg'),
-    fallbackBg: 'radial-gradient(circle at 50% 40%, #8ce65a 0%, #2b592c 55%, #0d1710 100%)',
+    img: asset('gekko-mystic-portrait.jpg'),
+    accent: '#a3e635',
+    ringGlow: 'rgba(163, 230, 53, 0.34)',
+    fallbackBg: 'radial-gradient(circle at 50% 35%, #e5eee2 0%, #2b592c 62%, #0d1710 100%)',
   },
-  {
-    id: 'amy-portrait',
-    title: 'AMY J. GIL',
-    subtitle: 'Platino · Creadora de Contenido',
-    badge: 'ROSE GAMING // VIP',
-    img: asset('amy-cutout.webp'),
-    fallbackBg: 'radial-gradient(circle at 50% 35%, #d3c8ba 0%, #7d5360 55%, #171015 100%)',
-  },
-  {
-    id: 'brimstone-orbital',
+  brimstone: {
     title: 'Brimstone // Orbital',
     subtitle: 'Controller · 20% Uso',
     badge: 'CONTROLLER // 20%',
-    img: asset('brimstone-wallpaper.jpg'),
-    fallbackBg: 'radial-gradient(circle at 50% 40%, #ff8c3b 0%, #632810 55%, #170a06 100%)',
+    img: asset('brimstone-mystic-portrait.jpg'),
+    accent: '#ff8c3b',
+    ringGlow: 'rgba(255, 140, 59, 0.34)',
+    fallbackBg: 'radial-gradient(circle at 50% 35%, #eee5da 0%, #632810 62%, #170a06 100%)',
+  },
+};
+
+const EXTRA_MYSTIC_AGENTS = [
+  {
+    id: 'phoenix',
+    name: 'PHOENIX',
+    title: 'Phoenix // Llama Solar',
+    subtitle: 'Duelist · Pocket Pick',
+    badge: 'DUELIST // SOLAR',
+    img: asset('phoenix-mystic-portrait.jpg'),
+    accent: '#ffae34',
+    ringGlow: 'rgba(255, 174, 52, 0.36)',
+    fallbackBg: 'radial-gradient(circle at 50% 35%, #f5e6d4 0%, #6b3410 62%, #170b05 100%)',
+    desc: 'Entrada agresiva y autosuficiencia con fuego solar. Ideal para abrir ángulos con flashes rápidos y reiniciar duelos.',
+    emoji: '☀️',
+    usageLabel: 'Rol táctico',
+    usageValue: 'DUELIST · FLEX',
+    barWidth: 100,
+    gradient: 'linear-gradient(90deg, #ff7b00, #ffd05b)',
+    abilities: {
+      C: {
+        name: 'Llamarada (Control)',
+        desc: 'Muro de fuego que bloquea visión y me cura al atravesarlo para ganar espacio.',
+      },
+      Q: {
+        name: 'Bola Curva (Q)',
+        desc: 'Flash rápida en esquina para salir a buscar el primer duelo con ventaja.',
+      },
+      E: {
+        name: 'Manos Calientes (E)',
+        desc: 'Bola de fuego para limpiar posiciones cerradas o regenerar vida tras un intercambio.',
+      },
+      X: {
+        name: 'Cenizas (X)',
+        desc: 'Segunda vida para entrar primero al site, sacar información y forzar rotaciones.',
+      },
+    },
   },
   {
-    id: 'sage-wall',
-    title: 'Barrera de Jade',
-    subtitle: 'Control de Terreno · Defensa',
-    badge: 'SENTINEL // SAGE',
-    img: asset('sage-wallpaper.jpg'),
-    fallbackBg: 'radial-gradient(circle at 50% 40%, #2ee6a8 0%, #164f47 55%, #081515 100%)',
-  },
-  {
-    id: 'gekko-art',
-    title: 'Dizzy & Thrash',
-    subtitle: 'Reconocimiento Dinámico',
-    badge: 'TACTICAL // GEKKO',
-    img: asset('gekko_art.webp'),
-    fallbackBg: 'radial-gradient(circle at 50% 40%, #a3e635 0%, #365314 55%, #0b1408 100%)',
+    id: 'chamber',
+    name: 'CHAMBER',
+    title: 'Chamber // Tour de Force',
+    subtitle: 'Sentinel · Pocket Pick',
+    badge: 'SENTINEL // GOLD',
+    img: asset('chamber-mystic-portrait.jpg'),
+    accent: '#e5c168',
+    ringGlow: 'rgba(229, 193, 104, 0.36)',
+    fallbackBg: 'radial-gradient(circle at 50% 35%, #f0eadc 0%, #4f4124 62%, #120f0a 100%)',
+    desc: 'Precisión letal y control de flancos. Especialista en sostener líneas largas con reposicionamiento instantáneo.',
+    emoji: '⚜️',
+    usageLabel: 'Rol táctico',
+    usageValue: 'HOLD · FLEX',
+    barWidth: 100,
+    gradient: 'linear-gradient(90deg, #b88933, #f3d78b)',
+    abilities: {
+      C: {
+        name: 'Marca Registrada (Control)',
+        desc: 'Trampa que detecta y ralentiza flancos enemigos mientras vigilo el ángulo principal.',
+      },
+      Q: {
+        name: 'Cazador de Cabezas (Q)',
+        desc: 'Pistola pesada de alta precisión para rondas eco y tiros limpios a larga distancia.',
+      },
+      E: {
+        name: 'Rendezvous (E)',
+        desc: 'Ancla de teletransporte para buscar el primer pick agresivo y salir sin castigo.',
+      },
+      X: {
+        name: 'Tour de Force (X)',
+        desc: 'Rifle de francotirador definitivo que genera campo de ralentización con cada baja.',
+      },
+    },
   },
 ];
 
+const GROW_ITEMS = [
+  ...AGENTS_DATA.map((agent) => {
+    const meta = AGENT_META[agent.id] || {};
+    return {
+      ...agent,
+      ...meta,
+      usageLabel: 'Tasa de uso',
+      usageValue: `${agent.percent}%`,
+      barWidth: agent.percent,
+    };
+  }),
+  ...EXTRA_MYSTIC_AGENTS,
+];
+
+const ABILITY_KEYS = ['C', 'Q', 'E', 'X'];
+
 const CONFIG = {
-  copies: 5,
-  idleDriftPxPerSec: 16,
-  maxSteerPxPerSec: 95,
-  mouseImpulseGain: 0.45,
-  growScale: 1.22,
-  extraPartGap: 4,
+  copies: 6,
+  idleDriftPxPerSec: 15,
+  maxSteerPxPerSec: 90,
+  mouseImpulseGain: 0.4,
+  growScale: 1.2,
+  extraPartGap: 8,
   lerpRate: 0.1,
-  dimOpacity: 0.42,
-  idleOpacity: 0.9,
+  dimOpacity: 0.46,
+  idleOpacity: 0.92,
 };
 
 const SLOTS = Array.from({ length: GROW_ITEMS.length * CONFIG.copies }, (_, slot) => ({
@@ -100,6 +161,19 @@ export default function AgentCarousel() {
   const badgeRefs = useRef([]);
   const captionRefs = useRef([]);
 
+  const [activeAbilities, setActiveAbilities] = useState(() => ({
+    sage: 'C',
+    gekko: 'Q',
+    brimstone: 'E',
+    phoenix: 'Q',
+    chamber: 'E',
+  }));
+
+  const selectAbility = (agentId, key, e) => {
+    if (e) e.stopPropagation();
+    setActiveAbilities((prev) => (prev[agentId] === key ? prev : { ...prev, [agentId]: key }));
+  };
+
   useEffect(() => {
     const sectionEl = sectionRef.current;
     const stageEl = stageRef.current;
@@ -120,6 +194,7 @@ export default function AgentCarousel() {
     let velocityPxPerSec = CONFIG.idleDriftPxPerSec;
     let impulseOffset = 0;
     let isVisible = true;
+    let pointerOverHud = false;
     let rafId = 0;
     let lastTime = performance.now();
 
@@ -137,7 +212,7 @@ export default function AgentCarousel() {
       return { cardW, gap, step: cardW + gap };
     };
 
-    // Inicializar en el ciclo central (2 * singleCycleWidth)
+    // Inicializar en el ciclo central (2 * singleCycleWidth de 6 copias)
     const initMetrics = getCardMetrics();
     scrollOffset = n * initMetrics.step * 2;
 
@@ -214,7 +289,11 @@ export default function AgentCarousel() {
         targetRaw = clamp(-rect.top / wipeSpanPx, 0, 1);
       }
 
-      if (!wipeInit) {
+      if (
+        !wipeInit ||
+        (targetRaw >= 0.98 && smoothedRaw < 0.15) ||
+        (targetRaw <= 0.02 && smoothedRaw > 0.85)
+      ) {
         smoothedRaw = targetRaw;
         wipeInit = true;
         applyWipeState(smoothedRaw);
@@ -317,12 +396,13 @@ export default function AgentCarousel() {
       updateHoveredSlotFromPointer(gap);
 
       let targetVelocity = CONFIG.idleDriftPxPerSec;
-      if (reducedMotion) {
+      if (reducedMotion || pointerOverHud || focusedSlot !== -1) {
         targetVelocity = 0;
       } else if (pointerPos.active) {
         const normX = (pointerPos.x / Math.max(1, window.innerWidth) - 0.5) * 2;
         const shaped = Math.sign(normX) * Math.pow(Math.abs(normX), 1.6);
-        targetVelocity = shaped * CONFIG.maxSteerPxPerSec;
+        const inspectDamp = hoveredSlot !== -1 ? 0.35 : 1;
+        targetVelocity = shaped * CONFIG.maxSteerPxPerSec * inspectDamp;
       }
 
       velocityPxPerSec += (targetVelocity - velocityPxPerSec) * lerpFactor;
@@ -333,11 +413,11 @@ export default function AgentCarousel() {
       scrollOffset += velocityPxPerSec * dt + impulseStep;
 
       const singleCycleWidth = n * step;
-      while (scrollOffset >= singleCycleWidth * 3) {
+      while (scrollOffset >= singleCycleWidth * 4) {
         scrollOffset -= singleCycleWidth;
         shiftCycleBackward();
       }
-      while (scrollOffset < singleCycleWidth) {
+      while (scrollOffset < singleCycleWidth * 2) {
         scrollOffset += singleCycleWidth;
         shiftCycleForward();
       }
@@ -374,8 +454,8 @@ export default function AgentCarousel() {
         const scale = 1 + (CONFIG.growScale - 1) * p;
         const baseOp = CONFIG.idleOpacity - hoverPresence * (CONFIG.idleOpacity - CONFIG.dimOpacity);
         const opacity = baseOp + p * (1 - baseOp);
-        const baseBright = 0.94 - hoverPresence * 0.32;
-        const brightness = baseBright + p * (1.05 - baseBright);
+        const baseBright = 0.94 - hoverPresence * 0.3;
+        const brightness = baseBright + p * (1.03 - baseBright);
 
         const cardEl = cardRefs.current[i];
         if (cardEl) {
@@ -383,24 +463,24 @@ export default function AgentCarousel() {
           cardEl.style.opacity = opacity.toFixed(3);
           cardEl.style.filter = `brightness(${brightness.toFixed(3)})`;
           cardEl.style.zIndex = p > 0.05 ? String(10 + Math.round(p * 20)) : '1';
+          cardEl.dataset.expanded = p > 0.45 ? 'true' : 'false';
         }
 
         const shadeEl = shadeRefs.current[i];
-        if (shadeEl) shadeEl.style.opacity = p.toFixed(3);
+        if (shadeEl) shadeEl.style.opacity = (0.28 + p * 0.72).toFixed(3);
 
         const ringEl = ringRefs.current[i];
         if (ringEl) ringEl.style.opacity = p.toFixed(3);
 
         const captionEl = captionRefs.current[i];
         if (captionEl) {
-          captionEl.style.opacity = p.toFixed(3);
-          captionEl.style.transform = `translate3d(0, ${((1 - p) * 10).toFixed(2)}px, 0)`;
+          captionEl.style.setProperty('--p', p.toFixed(3));
         }
 
         const badgeEl = badgeRefs.current[i];
         if (badgeEl) {
-          badgeEl.style.opacity = p.toFixed(3);
-          badgeEl.style.transform = `translate3d(0, ${((1 - p) * -6).toFixed(2)}px, 0)`;
+          badgeEl.style.opacity = (0.78 + p * 0.22).toFixed(3);
+          badgeEl.style.transform = `translate3d(0, ${((1 - p) * -3).toFixed(2)}px, 0)`;
         }
       }
 
@@ -427,7 +507,9 @@ export default function AgentCarousel() {
     };
 
     const onPointerMove = (e) => {
-      if (pointerPos.active) {
+      const target = e.target instanceof Element ? e.target : null;
+      pointerOverHud = Boolean(target && target.closest('.grow-card-tactical'));
+      if (pointerPos.active && !pointerOverHud) {
         const dx = e.clientX - pointerPos.x;
         impulseOffset += dx * CONFIG.mouseImpulseGain;
       }
@@ -438,6 +520,7 @@ export default function AgentCarousel() {
 
     const onPointerLeave = () => {
       pointerPos.active = false;
+      pointerOverHud = false;
       hoveredSlot = focusedSlot;
     };
 
@@ -451,9 +534,12 @@ export default function AgentCarousel() {
       }
     };
 
-    const onFocusOut = () => {
-      focusedSlot = -1;
-      if (!pointerPos.active) hoveredSlot = -1;
+    const onFocusOut = (e) => {
+      const next = e.relatedTarget instanceof Element ? e.relatedTarget.closest('.grow-card') : null;
+      if (!next) {
+        focusedSlot = -1;
+        if (!pointerPos.active) hoveredSlot = -1;
+      }
     };
 
     const io = new IntersectionObserver(
@@ -495,8 +581,9 @@ export default function AgentCarousel() {
     <section
       ref={sectionRef}
       className="grow-carousel-section"
-      aria-label="Galería interactiva de agentes y momentos de AMY"
+      aria-label="Especialidades tácticas y agentes de AMY"
     >
+      <div id="agents" className="grow-carousel-anchor" aria-hidden="true" />
       <svg
         className="grow-diagonal-slash"
         viewBox="0 0 100 100"
@@ -573,16 +660,19 @@ export default function AgentCarousel() {
         <div className="grow-backdrop-vignette" aria-hidden="true" />
 
         <header className="grow-header">
-          <div className="grow-eyebrow">THE AMY SHOW // GROW CAROUSEL</div>
+          <div className="grow-eyebrow">THE AMY SHOW // ESPECIALIDADES TÁCTICAS</div>
           <h2 className="grow-title">
-            Momentos, <span>Agentes</span> &amp; Clips
+            Agentes, <span>Sinergia</span> &amp; Control
           </h2>
         </header>
 
         <div className="grow-viewport">
           <div ref={trackRef} className="grow-track">
             {SLOTS.map(({ slot, item }) => {
-              const isFocusable = slot >= GROW_ITEMS.length * 2 && slot < GROW_ITEMS.length * 3;
+              const isPrimaryCycle = slot >= GROW_ITEMS.length * 2 && slot < GROW_ITEMS.length * 3;
+              const activeKey = activeAbilities[item.id] || 'C';
+              const currentAbility = item.abilities?.[activeKey] || item.abilities?.C;
+
               return (
                 <article
                   key={slot}
@@ -590,13 +680,18 @@ export default function AgentCarousel() {
                     cardRefs.current[slot] = el;
                   }}
                   className="grow-card"
-                  tabIndex={isFocusable ? 0 : -1}
-                  style={{ background: item.fallbackBg }}
+                  data-agent={item.id}
+                  tabIndex={isPrimaryCycle ? 0 : -1}
+                  style={{
+                    background: item.fallbackBg,
+                    '--agent-accent': item.accent,
+                    '--agent-ring-glow': item.ringGlow,
+                  }}
                 >
                   <img
                     className="grow-card-media"
                     src={item.img}
-                    alt={`${item.title} — ${item.subtitle}`}
+                    alt={`${item.name} — ${item.subtitle}`}
                     draggable="false"
                     decoding="async"
                     onError={(e) => {
@@ -609,6 +704,7 @@ export default function AgentCarousel() {
                     }}
                     className="grow-card-badge"
                   >
+                    <i className="grow-card-badge-dot" aria-hidden="true" />
                     {item.badge}
                   </span>
                   <div
@@ -629,8 +725,61 @@ export default function AgentCarousel() {
                     }}
                     className="grow-card-caption"
                   >
-                    <h3 className="grow-card-title">{item.title}</h3>
-                    <p className="grow-card-sub">{item.subtitle}</p>
+                    <div className="grow-card-head">
+                      <h3 className="grow-card-title">{item.title}</h3>
+                      <p className="grow-card-sub">{item.subtitle}</p>
+                    </div>
+
+                    <div className="grow-card-tactical">
+                      <p className="grow-card-desc">{item.desc}</p>
+
+                      {item.abilities && currentAbility && (
+                        <div className="grow-abilities-box">
+                          <div
+                            className="grow-ability-tabs"
+                            role="tablist"
+                            aria-label={`Habilidades tácticas de ${item.name}`}
+                          >
+                            {ABILITY_KEYS.map((key) => {
+                              const isSelected = activeKey === key;
+                              return (
+                                <button
+                                  key={key}
+                                  type="button"
+                                  role="tab"
+                                  tabIndex={isPrimaryCycle ? 0 : -1}
+                                  aria-selected={isSelected}
+                                  aria-label={`Habilidad ${key}: ${item.abilities[key]?.name}`}
+                                  className={`grow-ability-tab ${isSelected ? 'is-active' : ''}`}
+                                  onClick={(e) => selectAbility(item.id, key, e)}
+                                >
+                                  {key === 'C' ? 'Ctrl' : key}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="grow-ability-detail" role="tabpanel">
+                            <h4 className="grow-ability-name">{currentAbility.name}</h4>
+                            <p className="grow-ability-text">{currentAbility.desc}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grow-usage">
+                        <div className="grow-usage-head">
+                          <span>
+                            {item.emoji} {item.usageLabel}
+                          </span>
+                          <strong>{item.usageValue}</strong>
+                        </div>
+                        <div className="grow-usage-track">
+                          <div
+                            className="grow-usage-fill"
+                            style={{ width: `${item.barWidth}%`, background: item.gradient }}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </article>
               );

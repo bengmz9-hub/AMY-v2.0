@@ -15,6 +15,19 @@
   z-index: 3;
 }
 
+.amy-settled-anchor {
+  position: absolute;
+  top: calc(100dvh * var(--hero-transition));
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.amy-hero[data-static='true'] .amy-settled-anchor {
+  top: 0;
+}
+
 .amy-stage {
   position: sticky;
   top: 0;
