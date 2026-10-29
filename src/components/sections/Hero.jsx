@@ -6,7 +6,6 @@ import './Hero.css';
 
 const asset = (name) => `${import.meta.env.BASE_URL}assets/imagenes/${name}`;
 const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
-const BACKGROUND_HOLD_MS = 3000;
 
 const transitionDistance = (runway, stage) => stage.offsetHeight *
   Number(getComputedStyle(runway).getPropertyValue('--hero-transition'));
@@ -116,9 +115,8 @@ export default function Hero() {
   useEffect(() => {
     let frame = 0;
     let metrics = null;
-    let holdUntil = 0;
-    let previousScroll = window.scrollY;
-    let bypassHold = Boolean(window.location.hash && window.location.hash !== '#amy');
+    let smoothedWipe = 0;
+    let wipeInitialized = false;
 
     const draw = () => {
       frame = 0;
@@ -219,20 +217,44 @@ export default function Hero() {
         setSignatureKey((k) => k + 1);
       }
 
+      const cs = getComputedStyle(runway.current);
+      const dwell = m.height * (Number(cs.getPropertyValue('--hero-dwell')) || 1.45);
+      const wipeSpan = Math.max(1, m.height * (Number(cs.getPropertyValue('--hero-wipe-span')) || 1.85));
+      const dwellEnd = travel + dwell;
+      // La transición diagonal solo existe desde el Hero background asentado (progress >= 1), nunca sobre el vídeo de intro.
+      const targetWipe = staticScene || progress < 1 ? 0 : clamp((scroll - dwellEnd) / wipeSpan, 0, 1);
+      if (!wipeInitialized || staticScene || progress < 1) {
+        smoothedWipe = targetWipe;
+        wipeInitialized = true;
+      } else {
+        smoothedWipe += (targetWipe - smoothedWipe) * 0.1;
+        if (Math.abs(targetWipe - smoothedWipe) < 0.0004) {
+          smoothedWipe = targetWipe;
+        }
+      }
+      const wipe = smoothedWipe;
+      const wipeStr = wipe.toFixed(4);
+
       stage.current.style.clipPath = 'none';
       stage.current.style.setProperty('--lens-settle', lensSettle.toFixed(4));
       stage.current.style.setProperty('--reveal', reveal.toFixed(4));
       stage.current.style.setProperty('--intro-fade', introFade.toFixed(4));
       stage.current.style.setProperty('--hero-progress', progress.toFixed(4));
-      stage.current.style.setProperty('--wipe', '0.0000');
+      stage.current.style.setProperty('--wipe', wipeStr);
       stage.current.dataset.phase = nextPhase;
       stage.current.dataset.progress = progress.toFixed(4);
-      stage.current.dataset.wipe = '0.0000';
+      stage.current.dataset.wipe = wipeStr;
       stage.current.dataset.scale = scale.toFixed(4);
       stage.current.dataset.introDone = String(reveal > 0.55);
       stage.current.dataset.zoomed = String(isZoomed);
-      runway.current.dataset.wipe = '0.0000';
+      runway.current.dataset.wipe = wipeStr;
+      runway.current.dataset.wipeTarget = targetWipe.toFixed(4);
       runway.current.dataset.progress = progress.toFixed(4);
+      window.dispatchEvent(new CustomEvent('amy-hero-wipe'));
+
+      if (Math.abs(targetWipe - smoothedWipe) > 0.0004) {
+        frame = requestAnimationFrame(draw);
+      }
 
       const isSettled = nextPhase === 'settled';
       if (copy.current) {
@@ -256,42 +278,13 @@ export default function Hero() {
     redraw.current = schedule;
 
     const onScroll = () => {
-      if (!staticScene && !gameplayFailed && !zoomedRef.current && runway.current && stage.current) {
-        const origin = window.scrollY + runway.current.getBoundingClientRect().top;
-        const scroll = window.scrollY - origin;
-        const transition = transitionDistance(runway.current, stage.current);
-        const end = runway.current.offsetHeight - stage.current.offsetHeight;
-        if (scroll < transition - 1) {
-          holdUntil = 0;
-          if (window.scrollY < previousScroll) bypassHold = false;
-        } else if (!bypassHold && !holdUntil && window.scrollY > previousScroll &&
-          previousScroll - origin <= end) {
-          // Only arrivals from within the Hero arm the dwell. A restored position
-          // below it must stay free, while a large gesture crossing it still waits.
-          holdUntil = performance.now() + BACKGROUND_HOLD_MS;
-        }
-        // Keep the full portrait visible for a minimum dwell, even after a large
-        // downward gesture. Upward scrolling and explicit anchor links stay free.
-        if (!bypassHold && performance.now() < holdUntil && scroll > end - 1) {
-          window.scrollTo({ top: origin + end - 1, behavior: 'instant' });
-        }
-      }
-      previousScroll = window.scrollY;
       schedule();
     };
     const onHistoryNavigation = () => {
-      // popstate runs before the browser restores scroll; hashchange also covers
-      // fragment navigation that did not come from a click.
-      bypassHold = true;
-      holdUntil = 0;
       cancelGlassesForNavigation();
     };
     const onAnchorClick = (event) => {
       const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
-      if (link && link.hash && link.hash !== '#amy' && link.hash !== '#') {
-        bypassHold = true;
-        holdUntil = 0;
-      }
       if (link && (link.hash || link.getAttribute('href') === '#')) {
         cancelGlassesForNavigation();
       }

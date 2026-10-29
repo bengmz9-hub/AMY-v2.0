@@ -1,0 +1,370 @@
+/* =========================================================================
+   GROW CAROUSEL — Pantalla completa 100dvh debajo del Hero
+   Con Transición Agresiva JJettas (Diagonal Polygon Slash + Kinetic Sweep)
+   y Pausa Sticky de 140dvh
+   ========================================================================= */
+
+.grow-carousel-section {
+  --gc-card-w: clamp(360px, 26vw, 430px);
+  --gc-card-h: clamp(490px, 36vw, 580px);
+  --gc-card-gap: 10px;
+  --gc-card-radius: 18px;
+  --gc-wipe-span: 1.85;
+  --gc-dwell: 1.4;
+  --enter: 0;
+  --y-left: 100%;
+  --y-right: 118%;
+
+  position: relative;
+  width: 100%;
+  max-width: none;
+  margin: calc(-100dvh * (1 + var(--gc-wipe-span))) 0 0;
+  padding: 0;
+  height: calc(100dvh * (1 + var(--gc-wipe-span) + var(--gc-dwell)));
+  z-index: 4;
+  background: transparent;
+  pointer-events: none;
+}
+
+/* ── Escena sticky 100dvh con recorte diagonal JJettas ───────────── */
+.grow-portal-frame {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100dvh;
+  min-height: 620px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  isolation: isolate;
+  user-select: none;
+  background: #08070a;
+  clip-path: polygon(0% var(--y-left), 100% var(--y-right), 100% 100%, 0% 100%);
+  will-change: clip-path;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.grow-portal-frame[data-visible='true'] {
+  visibility: visible;
+}
+
+.grow-portal-frame[data-active='true'] {
+  pointer-events: auto;
+}
+
+.grow-portal-frame[data-settled='true'] {
+  clip-path: none;
+}
+
+/* ── Cuchilla diagonal luminosa (JJettas Slash Line) ─────────────── */
+.grow-diagonal-slash {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  z-index: 15;
+  pointer-events: none;
+  overflow: visible;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+  filter:
+    drop-shadow(0 0 18px rgba(192, 122, 139, 0.85))
+    drop-shadow(0 0 36px rgba(46, 230, 168, 0.55));
+}
+
+.grow-carousel-section[data-wiping='true'] .grow-diagonal-slash {
+  opacity: 1;
+}
+
+/* ── Fondo ambiental desenfocado (Blurred Backdrop) ──────────────── */
+.grow-backdrop-stack {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: #08070a;
+}
+
+.grow-backdrop-layer {
+  position: absolute;
+  inset: -14%;
+  width: 128%;
+  height: 128%;
+  object-fit: cover;
+  filter: blur(72px) saturate(1.42) brightness(0.58);
+  transform: scale(1.18) translateZ(0);
+  opacity: 0;
+  will-change: opacity;
+  pointer-events: none;
+}
+
+.grow-backdrop-ambient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 52%,
+    rgba(192, 122, 139, 0.16) 0%,
+    rgba(8, 7, 10, 0) 65%
+  );
+  opacity: 1;
+}
+
+.grow-backdrop-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(8, 7, 10, 0.86) 0%,
+      rgba(8, 7, 10, 0.22) 22%,
+      rgba(8, 7, 10, 0.08) 52%,
+      rgba(8, 7, 10, 0.28) 80%,
+      rgba(8, 7, 10, 0.92) 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(8, 7, 10, 0.65) 0%,
+      rgba(8, 7, 10, 0) 10%,
+      rgba(8, 7, 10, 0) 90%,
+      rgba(8, 7, 10, 0.65) 100%
+    );
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ── Cabecera con barrido opuesto ────────────────────────────────── */
+.grow-header {
+  position: relative;
+  z-index: 3;
+  text-align: center;
+  margin-bottom: clamp(20px, 3vh, 36px);
+  padding: 0 20px;
+  pointer-events: none;
+  opacity: calc(var(--enter, 1));
+  transform:
+    translate3d(
+      calc((1 - var(--enter, 1)) * -18vw),
+      calc((1 - var(--enter, 1)) * 6vh),
+      0
+    );
+  will-change: transform, opacity;
+}
+
+.grow-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #2ee6a8;
+  margin-bottom: 6px;
+}
+
+.grow-eyebrow::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2ee6a8;
+  box-shadow: 0 0 10px #2ee6a8;
+}
+
+.grow-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.85rem, 3.3vw, 2.75rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #f4f4f5;
+  margin: 0;
+}
+
+.grow-title span {
+  color: var(--accent, #c07a8b);
+}
+
+/* ── Viewport y pista infinita con barrido cinético JJettas ──────── */
+.grow-viewport {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  padding: 64px 0;
+  overflow: visible;
+  transform:
+    translate3d(
+      calc((1 - var(--enter, 1)) * 46vw),
+      calc((1 - var(--enter, 1)) * 14vh),
+      0
+    )
+    skewX(calc((1 - var(--enter, 1)) * -8.5deg))
+    scale(calc(0.82 + var(--enter, 1) * 0.18));
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.grow-track {
+  display: flex;
+  align-items: center;
+  gap: var(--gc-card-gap);
+  width: max-content;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+}
+
+/* ── Tarjeta individual (Grow Card) ──────────────────────────────── */
+.grow-card {
+  position: relative;
+  flex: 0 0 var(--gc-card-w);
+  width: var(--gc-card-w);
+  height: var(--gc-card-h);
+  border-radius: var(--gc-card-radius);
+  overflow: hidden;
+  background: #141218;
+  cursor: pointer;
+  will-change: transform, opacity, filter;
+  transform-origin: center center;
+  box-shadow:
+    0 22px 52px rgba(0, 0, 0, 0.52),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+  outline: none;
+}
+
+.grow-card:focus-visible {
+  box-shadow:
+    0 26px 64px rgba(0, 0, 0, 0.75),
+    0 0 0 2px #2ee6a8;
+}
+
+.grow-card-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  pointer-events: none;
+  transform: scale(1.01);
+}
+
+.grow-card-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--gc-card-radius);
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1.35px rgba(255, 214, 226, 0.42),
+    0 0 34px rgba(192, 122, 139, 0.28);
+  opacity: 0;
+  z-index: 3;
+}
+
+.grow-card-badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 3;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(10, 9, 14, 0.68);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #f4f4f5;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+}
+
+.grow-card-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(6, 5, 8, 0) 44%,
+    rgba(6, 5, 8, 0.56) 75%,
+    rgba(6, 5, 8, 0.9) 100%
+  );
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.grow-card-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  padding: 24px 18px 22px;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, 10px, 0);
+  will-change: opacity, transform;
+}
+
+.grow-card-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  line-height: 1.22;
+  margin: 0 0 4px;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.72);
+}
+
+.grow-card-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: rgba(244, 244, 245, 0.68);
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .grow-carousel-section {
+    --gc-card-w: 256px;
+    --gc-card-h: 356px;
+    --gc-card-gap: 8px;
+    min-height: 540px;
+  }
+
+  .grow-viewport {
+    padding: 44px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grow-carousel-section {
+    margin-top: 0;
+    height: auto;
+    pointer-events: auto;
+  }
+
+  .grow-portal-frame {
+    position: relative;
+    clip-path: none !important;
+    pointer-events: auto;
+  }
+
+  .grow-diagonal-slash {
+    display: none;
+  }
+
+  .grow-header,
+  .grow-viewport {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}

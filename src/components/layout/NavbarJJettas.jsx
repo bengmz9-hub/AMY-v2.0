@@ -41,11 +41,11 @@ export default function NavbarJJettas() {
       frame = requestAnimationFrame(() => {
         setLightScene(Boolean(hero && stage && hero.getBoundingClientRect().bottom > 82 &&
           stage.dataset.phase === 'settled' && stage.dataset.zoomed !== 'true' &&
-          hero.dataset.portraitError !== 'true'));
+          hero.dataset.portraitError !== 'true' && Number(stage.dataset.wipe || 0) < 0.55));
       });
     };
     const observer = new MutationObserver(update);
-    if (stage) observer.observe(stage, { attributes: true, attributeFilter: ['data-phase', 'data-zoomed'] });
+    if (stage) observer.observe(stage, { attributes: true, attributeFilter: ['data-phase', 'data-zoomed', 'data-wipe'] });
     if (hero) observer.observe(hero, { attributes: true, attributeFilter: ['data-portrait-error'] });
     update();
     window.addEventListener('scroll', update, { passive: true });

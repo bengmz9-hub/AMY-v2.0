@@ -1,8 +1,7 @@
-// Stats — bento grid con stagger al entrar (estilo Folira) + carrusel de agentes debajo.
+// Stats — bento grid con stagger al entrar (estilo Folira).
 // Datos de juego, sin identificadores de cuentas sociales.
-// CSS: .stats-section .bento-card (stagger) y .stats-carousel en index.css.
+// CSS: .stats-section .bento-card (stagger) en index.css.
 import { useEffect, useRef } from 'react';
-import AgentCarousel from '@/components/sections/AgentCarousel.jsx';
 import { STATS_DATA as STATS } from '@/data/statsData.jsx';
 
 export default function Stats() {
@@ -35,10 +34,6 @@ export default function Stats() {
             <span className="bento-card-label">{stat.label}</span>
           </div>
         ))}
-      </div>
-
-      <div className="stats-carousel">
-        <AgentCarousel />
       </div>
     </section>
   );

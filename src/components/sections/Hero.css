@@ -2,13 +2,15 @@
 .amy-hero {
   --color-sand: #d3c8ba;
   --color-ink-deep: #171220;
-  --hero-transition: 2.4;
+  --hero-transition: 1.35;
+  --hero-dwell: 1.45;
+  --hero-wipe-span: 1.85;
   position: relative;
   width: 100%;
   max-width: none;
   margin: 0;
   padding: 0;
-  height: calc(100dvh * (2 + var(--hero-transition)));
+  height: calc(100dvh * (1 + var(--hero-transition) + var(--hero-dwell) + var(--hero-wipe-span)));
   background: #08070a;
   z-index: 3;
 }
@@ -167,13 +169,34 @@
   opacity: var(--reveal);
 }
 
-/* Outer wrapper for restrained scroll-exit scale (1 -> 0.82, center bottom) */
+/* Outer wrapper for aggressive JJettas scroll-exit compression into Grow Carousel */
 .amy-wipe-scale {
   position: absolute;
   inset: 0;
   z-index: 2;
-  transform: scale(calc(1 - var(--wipe, 0) * 0.18));
-  transform-origin: center bottom;
+  transform:
+    translate3d(calc(var(--wipe, 0) * -5.5vw), calc(var(--wipe, 0) * -8.5vh), 0)
+    scale(calc(1 - var(--wipe, 0) * 0.22))
+    rotate(calc(var(--wipe, 0) * -2.2deg));
+  filter:
+    brightness(calc(1 - var(--wipe, 0) * 0.28))
+    contrast(calc(1 + var(--wipe, 0) * 0.16));
+  transform-origin: center 48%;
+}
+
+.amy-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 11;
+  pointer-events: none;
+  background: linear-gradient(
+    166deg,
+    rgba(8, 7, 10, 0.06) 0%,
+    rgba(22, 12, 19, 0.38) 52%,
+    rgba(8, 7, 10, 0.72) 100%
+  );
+  opacity: calc(var(--wipe, 0) * 0.58);
 }
 
 .amy-portrait-wrap {

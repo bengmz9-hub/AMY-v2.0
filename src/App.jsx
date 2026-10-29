@@ -1,6 +1,7 @@
 import NavbarJJettas from '@/components/layout/NavbarJJettas.jsx';
 import Footer from '@/components/layout/Footer.jsx';
 import Hero from '@/components/sections/Hero.jsx';
+import AgentCarousel from '@/components/sections/AgentCarousel.jsx';
 import Stats from '@/components/sections/Stats.jsx';
 import Agents from '@/components/sections/Agents.jsx';
 import SetupGear from '@/components/sections/SetupGear.jsx';
@@ -20,6 +21,7 @@ export default function App() {
 
       <main id="main" aria-label="Contenido principal">
         <Hero />
+        <AgentCarousel />
         <Stats />
         <Agents />
         <SetupGear />
