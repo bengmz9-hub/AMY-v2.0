@@ -4,7 +4,7 @@ import { PROFILE } from '@/data/profile.js';
 import AmySignature from '@/components/ui/AmySignature.jsx';
 import './Hero.css';
 
-const asset = (name) => `${import.meta.env.BASE_URL}assets/imagenes/${name}`;
+const asset = (name) => `${import.meta.env.BASE_URL}assets/${name}`;
 const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
 
 const transitionDistance = (runway, stage) => stage.offsetHeight *
@@ -66,8 +66,8 @@ export default function Hero() {
 
   const gameplaySrc =
     gameplayCodec === 'av1'
-      ? asset('valorant-gameplay-720p-av1.webm')
-      : asset('valorant-gameplay-720p-h264.mp4');
+      ? asset('videos/valorant-gameplay-720p-av1.webm')
+      : asset('videos/valorant-gameplay-720p-h264.mp4');
   const staticScene = reduced || portraitError;
   const videoAllowed = (!reduced || manualVideoRequested) && !portraitError;
 
@@ -637,13 +637,13 @@ export default function Hero() {
           style={{
             // Custom-property URLs resolve at their CSS use site; anchor them to the page,
             // not the bundled stylesheet directory, including when hosted in a subpath.
-            '--mask-amy': `url("${new URL(asset('amy.svg'), document.baseURI).href}")`,
-            '--mask-juarez': `url("${new URL(asset('juarez.svg'), document.baseURI).href}")`,
+            '--mask-amy': `url("${new URL(asset('images/amy/amy.svg'), document.baseURI).href}")`,
+            '--mask-juarez': `url("${new URL(asset('images/amy/juarez.svg'), document.baseURI).href}")`,
           }}
         >
           <img
             className="bg-layers__plate"
-            src={asset('jjettas-pebble-light-plate.webp')}
+            src={asset('images/amy/jjettas-pebble-light-plate.webp')}
             alt=""
             width="1915"
             height="821"
@@ -669,7 +669,7 @@ export default function Hero() {
         <div className="amy-backdrop" aria-hidden="true">
           <div
             className="amy-backdrop-texture"
-            style={{ backgroundImage: `url(${asset('amy-hero-texture.svg')})` }}
+            style={{ backgroundImage: `url(${asset('images/amy/amy-hero-texture.svg')})` }}
           />
           <span className="amy-backdrop-word">AMY</span>
         </div>
@@ -679,7 +679,7 @@ export default function Hero() {
             <div ref={plane} className="amy-portrait-plane">
               <img
                 className="amy-portrait"
-                src={asset(`amy-cutout.${portraitFormat}`)}
+                src={asset(`images/amy/amy-cutout.${portraitFormat}`)}
                 width="1915"
                 height="821"
                 alt="AMY con gafas ámbar y chaqueta de cuero negro"
@@ -697,7 +697,7 @@ export default function Hero() {
               ref={gameplayVideo}
               className="amy-lens-video"
               src={gameplaySrc}
-              poster={asset('amy-hero-gameplay-flat-crt-poster.jpg')}
+              poster={asset('images/amy/amy-hero-gameplay-flat-crt-poster.jpg')}
               muted
               loop
               playsInline
@@ -808,7 +808,7 @@ export default function Hero() {
           <div ref={copy} className="amy-reveal">
             <img
               className="amy-valorant-margin"
-              src={asset('valorant-vertical-red.png')}
+              src={asset('images/amy/valorant-vertical-red.png')}
               width="118"
               height="672"
               alt=""
@@ -820,7 +820,7 @@ export default function Hero() {
                 <AmySignature
                   key={signatureKey}
                   id={`${id}-signature`}
-                  src={asset('amy-signature-alpha.png')}
+                  src={asset('images/amy/amy-signature-alpha.png')}
                 />
               </div>
               <p className="amy-bio-text">
@@ -856,7 +856,7 @@ export default function Hero() {
                   <div className="amy-sage-aura" aria-hidden="true" />
                   <div className="amy-sage-art">
                     <img
-                      src={asset('sage-mystic-portrait.jpg')}
+                      src={asset('images/agents/sage-mystic-portrait.jpg')}
                       width="512"
                       height="1024"
                       alt="Sage, el personaje principal de AMY en Valorant"

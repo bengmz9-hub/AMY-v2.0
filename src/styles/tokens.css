@@ -1,0 +1,42 @@
+/* Variables globales y modo competitivo. Valores y selectores conservados; las variables de escena siguen junto a sus componentes. */
+@theme {
+  --font-sans: var(--font-sans);
+  --font-cinzel: var(--font-cinzel);
+
+  /* Fondo general elegante */
+  --color-bg-main: #08070a;
+  --color-bg-card: #121116;
+  --color-border-subtle: #27272a;
+
+  /* Acentos mate (cero neón) */
+  --color-rose-gold: #c07a8b;
+  --color-burgundy-dim: #1c1017;
+
+  /* Tipografía */
+  --color-text-main: #f4f4f5;
+  --color-text-muted: #a1a1aa;
+}
+:root {
+  --bg-dark: var(--color-bg-main, #08070a);
+  --bg-card: var(--color-bg-card, #121116);
+  --bg-card-subtle: var(--color-burgundy-dim, #1c1017);
+  --text-main: var(--color-text-main, #f4f4f5);
+  --text-sub: var(--color-text-muted, #a1a1aa);
+  --accent: var(--color-rose-gold, #c07a8b);
+  --accent-soft: rgba(192, 122, 139, 0.85);
+  --accent-glow: rgba(192, 122, 139, 0.15);
+  --glass: rgba(255, 255, 255, 0.02);
+  --glass-border: var(--color-border-subtle, #27272a);
+  --radius-lg: 24px;
+  --transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+body.comp-mode {
+  --bg-dark: #050608;
+  --bg-card: rgba(15, 17, 23, 0.75);
+  --accent: #ff4655;
+  --accent-glow: rgba(255, 70, 85, 0.3);
+  --accent-radial: rgba(255, 70, 85, 0.04);
+  --text-main: #ff4655;
+  --text-sub: #cbd5e1; /* Mejorado contraste de accesibilidad (antes #94a3b8) */
+  --glass-border: rgba(255, 255, 255, 0.08);
+}

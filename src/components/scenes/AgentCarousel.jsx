@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AGENTS_DATA } from '@/data/agentsData.js';
 import './GrowCarousel.css';
 
-const asset = (name) => `${import.meta.env.BASE_URL}assets/imagenes/${name}`;
+const asset = (name) => `${import.meta.env.BASE_URL}assets/images/agents/${name}`;
 const clamp = (v, min = 0, max = 1) => Math.max(min, Math.min(max, v));
 const smoothstep = (v) => {
   const t = clamp(v, 0, 1);

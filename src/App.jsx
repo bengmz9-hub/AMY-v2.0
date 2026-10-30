@@ -1,9 +1,8 @@
 import NavbarJJettas from '@/components/layout/NavbarJJettas.jsx';
 import Footer from '@/components/layout/Footer.jsx';
-import Hero from '@/components/sections/Hero.jsx';
-import AgentCarousel from '@/components/sections/AgentCarousel.jsx';
+import Hero from '@/components/scenes/Hero.jsx';
+import AgentCarousel from '@/components/scenes/AgentCarousel.jsx';
 import Stats from '@/components/sections/Stats.jsx';
-import Agents from '@/components/sections/Agents.jsx';
 import SetupGear from '@/components/sections/SetupGear.jsx';
 import AmyShow from '@/components/sections/AmyShow.jsx';
 import { useScrollProgress } from '@/hooks/useScrollProgress.js';
@@ -23,7 +22,6 @@ export default function App() {
         <Hero />
         <AgentCarousel />
         <Stats />
-        <Agents />
         <SetupGear />
         <AmyShow />
       </main>

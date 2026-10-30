@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://bengmz9-hub.github.io/AMY-v2.0/</loc>
+    <lastmod>2026-10-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://bengmz9-hub.github.io/AMY-v2.0/assets/images/amy/amy-cutout.webp</image:loc>
+      <image:title>AMY Valorant Player y Creadora de Contenido</image:title>
+      <image:caption>Portfolio de AMY, jugadora de Valorant Platino y main Sage</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://bengmz9-hub.github.io/AMY-v2.0/assets/images/agents/sage-mystic-portrait.jpg</image:loc>
+      <image:title>Sage - Main Agent de AMY en Valorant</image:title>
+    </image:image>
+  </url>
+</urlset>
