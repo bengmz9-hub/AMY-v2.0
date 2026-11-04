@@ -216,10 +216,8 @@ export default function AgentCarousel() {
     const initMetrics = getCardMetrics();
     scrollOffset = n * initMetrics.step * 2;
 
-    let targetRaw = 0;
-    let smoothedRaw = 0;
-    let wipeInit = false;
-    const isInteractive = () => targetRaw >= 0.996 && smoothedRaw >= 0.996;
+    let visualRaw = 0;
+    const isInteractive = () => visualRaw >= 0.996;
 
     const applyWipeState = (rawVal) => {
       const enter = smoothstep(rawVal);
@@ -258,9 +256,7 @@ export default function AgentCarousel() {
       sectionEl.dataset.static = String(staticEntrance);
       startLoop();
       if (staticEntrance) {
-        targetRaw = 1;
-        smoothedRaw = 1;
-        wipeInit = true;
+        visualRaw = 1;
         applyWipeState(1);
         return;
       }
@@ -270,33 +266,25 @@ export default function AgentCarousel() {
 
       // Mientras el Hero está en el vídeo de intro (gameplay), queda prohibida cualquier transición al carrusel.
       if (heroPhase && heroPhase !== 'settled') {
-        targetRaw = 0;
-        smoothedRaw = 0;
-        wipeInit = true;
+        visualRaw = 0;
         applyWipeState(0);
         return;
       }
 
-      if (heroEl && heroEl.dataset.wipeTarget !== undefined) {
-        targetRaw = clamp(Number(heroEl.dataset.wipeTarget) || 0, 0, 1);
+      if (heroEl) {
+        // Hero is the only visual clock. Its wipe event applies both boundaries
+        // in the same frame; the raw target remains a Hero diagnostic only.
+        visualRaw = clamp(Number(heroEl.dataset.wipe) || 0, 0, 1);
       } else {
         const rect = sectionEl.getBoundingClientRect();
         const vh = Math.max(1, window.innerHeight);
         const cs = getComputedStyle(sectionEl);
         const wipeSpanRatio = Number(cs.getPropertyValue('--gc-wipe-span')) || 1.85;
         const wipeSpanPx = Math.max(1, vh * wipeSpanRatio);
-        targetRaw = clamp(-rect.top / wipeSpanPx, 0, 1);
+        visualRaw = clamp(-rect.top / wipeSpanPx, 0, 1);
       }
 
-      if (
-        !wipeInit ||
-        (targetRaw >= 0.98 && smoothedRaw < 0.15) ||
-        (targetRaw <= 0.02 && smoothedRaw > 0.85)
-      ) {
-        smoothedRaw = targetRaw;
-        wipeInit = true;
-        applyWipeState(smoothedRaw);
-      }
+      applyWipeState(visualRaw);
     };
 
     const shiftCycleBackward = () => {
@@ -366,8 +354,7 @@ export default function AgentCarousel() {
 
     const tick = (now) => {
       rafId = 0;
-      const wipingPending = Math.abs(targetRaw - smoothedRaw) > 0.0003;
-      if (!isVisible && !wipingPending) {
+      if (!isVisible) {
         return;
       }
 
@@ -376,15 +363,6 @@ export default function AgentCarousel() {
 
       const reducedMotion = motionQuery.matches;
       const lerpFactor = reducedMotion ? 1 : 1 - Math.pow(1 - CONFIG.lerpRate, dt * 60);
-      const lerpWipe = 1 - Math.pow(1 - 0.085, dt * 60);
-
-      if (!reducedMotion) {
-        smoothedRaw += (targetRaw - smoothedRaw) * lerpWipe;
-        if (Math.abs(targetRaw - smoothedRaw) < 0.0003) {
-          smoothedRaw = targetRaw;
-        }
-        applyWipeState(smoothedRaw);
-      }
 
       const { cardW, gap, step } = getCardMetrics();
       const interactive = isInteractive();
@@ -392,7 +370,7 @@ export default function AgentCarousel() {
         updateHoveredSlotFromPointer(gap);
       } else {
         // Keep hover stable while the scroll transform moves/clips the cards.
-        if (smoothedRaw <= 0.001) {
+        if (visualRaw <= 0.001) {
           hoveredSlot = -1;
           pointerPos.active = false;
           pointerOverHud = false;

@@ -116,8 +116,9 @@ export default function Hero() {
     let metrics = null;
     let smoothedWipe = 0;
     let wipeInitialized = false;
+    let lastWipeTime = null;
 
-    const draw = () => {
+    const draw = (now) => {
       frame = 0;
       if (!metrics || !runway.current || !stage.current || !plane.current) return;
       const m = metrics;
@@ -231,7 +232,11 @@ export default function Hero() {
         smoothedWipe = targetWipe;
         wipeInitialized = true;
       } else {
-        smoothedWipe += (targetWipe - smoothedWipe) * 0.1;
+        // Preserve the approved 0.1-at-60Hz response across refresh rates.
+        // An idle loop starts with one reference frame, not the idle duration.
+        const elapsed = lastWipeTime === null ? 1000 / 60 : Math.max(0, now - lastWipeTime);
+        const response = 1 - Math.pow(1 - 0.1, elapsed * 60 / 1000);
+        smoothedWipe += (targetWipe - smoothedWipe) * response;
         if (Math.abs(targetWipe - smoothedWipe) < 0.0004) {
           smoothedWipe = targetWipe;
         }
@@ -257,7 +262,10 @@ export default function Hero() {
       window.dispatchEvent(new CustomEvent('amy-hero-wipe'));
 
       if (Math.abs(targetWipe - smoothedWipe) > 0.0004) {
+        lastWipeTime = now;
         frame = requestAnimationFrame(draw);
+      } else {
+        lastWipeTime = null;
       }
 
       const isSettled = nextPhase === 'settled';
