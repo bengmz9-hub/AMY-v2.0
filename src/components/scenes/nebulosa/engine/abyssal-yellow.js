@@ -375,7 +375,7 @@ export function createAbyssalYellow({THREE,scene,camera,renderer}) {
     uMid:{value:new THREE.Color().setRGB(154/255,98/255,32/255)},
     uHot:{value:new THREE.Color().setRGB(1,220/255,168/255)}});
   const uniforms={...common(),uSize:{value:1},uPixelRatio:{value:1},uVelocity:{value:0},
-    uMouse:{value:new THREE.Vector3(0,0,0)},uMouseForce:{value:FALL.mouseForce}};
+    uMouse:{value:new THREE.Vector3(0,0,0)},uMouseForce:{value:0}};
   for(const [key,value] of Object.entries(FALL)) {
     if(['camZ','stream','mouseForce'].includes(key))continue;
     uniforms['u'+key[0].toUpperCase()+key.slice(1)]={value};
@@ -447,12 +447,13 @@ export function createAbyssalYellow({THREE,scene,camera,renderer}) {
       if(reduced)clock=0;
       if(reduced||!paused||!initialized) {
         const strength=reduced?0:clamp(pointerStrength);
-        const nx=(clamp(pointer?.x,.5)-.5)*2*strength;
-        const ny=(clamp(pointer?.y,.5)-.5)*2*strength;
+        const px=(clamp(pointer?.x,.5)-.5)*2;
+        const py=(clamp(pointer?.y,.5)-.5)*2;
+        const nx=px*strength,ny=py*strength;
         const halfH=Math.tan(Math.PI/8)*FALL.camZ;
-        uniforms.uMouse.value.set(nx*halfH*width/height,ny*halfH,0);
-        // Source applies its .5 force at the centre even before pointer input.
-        uniforms.uMouseForce.value=reduced?0:FALL.mouseForce;
+        // Fade force at the last real position; never pull its wake to the centre.
+        uniforms.uMouse.value.set(px*halfH*width/height,py*halfH,0);
+        uniforms.uMouseForce.value=FALL.mouseForce*strength;
         referenceCamera.position.set(nx*.5,ny*.34,FALL.camZ);referenceCamera.lookAt(0,0,0);referenceCamera.updateMatrixWorld();
         streamUniforms.uParallax.value.set(nx*.55,ny*.35);
       }
