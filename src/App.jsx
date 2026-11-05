@@ -2,6 +2,7 @@ import NavbarJJettas from '@/components/layout/NavbarJJettas.jsx';
 import Footer from '@/components/layout/Footer.jsx';
 import Hero from '@/components/scenes/Hero.jsx';
 import AgentCarousel from '@/components/scenes/AgentCarousel.jsx';
+import NebulosaChapter from '@/components/scenes/nebulosa/NebulosaChapter.jsx';
 import Stats from '@/components/sections/Stats.jsx';
 import SetupGear from '@/components/sections/SetupGear.jsx';
 import AmyShow from '@/components/sections/AmyShow.jsx';
@@ -20,7 +21,8 @@ export default function App() {
 
       <main id="main" aria-label="Contenido principal">
         <Hero />
-        <AgentCarousel />
+        <div className="nebulosa-flow-exit"><AgentCarousel /></div>
+        <NebulosaChapter />
         <Stats />
         <SetupGear />
         <AmyShow />

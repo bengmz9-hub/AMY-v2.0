@@ -1,0 +1,47 @@
+Third-party visual credits and licenses
+
+ABYSSAL — © 2026 ABYSSAL
+Source: https://abyssal-xi-inky.vercel.app/
+Source shader/generators: https://abyssal-xi-inky.vercel.app/_next/static/chunks/248.426ef229881fb1b6.js
+Source yellow preset: https://abyssal-xi-inky.vercel.app/_next/static/chunks/app/page-f5f455b8c7daf0da.js
+License declared by the source: Creative Commons Attribution-ShareAlike 4.0 International.
+License: https://creativecommons.org/licenses/by-sa/4.0/
+Legal code: https://creativecommons.org/licenses/by-sa/4.0/legalcode
+
+The source shader/generator material and its AMY adaptations in
+src/components/scenes/nebulosa/engine/abyssal-yellow.js and
+src/components/scenes/nebulosa/engine/abyssal-photo-bridge.js are distributed
+under CC BY-SA 4.0, including those portions incorporated into the compiled
+JavaScript/shader bundles. They are exceptions to the repository's MIT license.
+Changes: shared-scene camera mapping, reversible story opacity, supplied clock,
+pause/reduced-motion handling, lifecycle/stats, prefixed shader symbols,
+attribute/alpha mapping and photo unprojection. No endorsement is implied.
+
+Three.js — Copyright 2010-2026 Three.js Authors
+https://threejs.org/ — MIT License
+The packaged Three.js source and full MIT notice are in
+src/components/scenes/nebulosa/engine/vendor/.
+Packaging changes: equivalent bracket access for the console logging method
+and trailing whitespace normalization; rendering code is unchanged.
+
+MIT License
+
+Copyright © 2010-2026 Three.js Authors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.

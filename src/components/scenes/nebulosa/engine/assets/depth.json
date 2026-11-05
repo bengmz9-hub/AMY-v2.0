@@ -1,0 +1,13 @@
+{
+  "width": 868,
+  "height": 879,
+  "dtype": "little-endian Float32",
+  "orientation": "row-major top-to-bottom, left-to-right",
+  "depth_kind": "normalized monocular relative inverse depth, not metric",
+  "renderer_guidance": {
+    "initial_depth_over_portrait_width": 0.12,
+    "initial_yaw_degrees": 5,
+    "initial_pitch_degrees": 3,
+    "note": "Starting values for visual review, not accepted settings; positive z toward viewer"
+  }
+}

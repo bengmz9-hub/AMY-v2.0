@@ -110,6 +110,7 @@ export default function Footer() {
       {/* Barra de pie con botón Volver Arriba */}
       <div className="hud-bottom-bar">
         <p className="hud-copy">© 2026 AMY // VALORANT PROTOCOL • ALL RIGHTS RESERVED</p>
+        <a className="hud-nav-link" href={`${import.meta.env.BASE_URL}third-party-notices.txt`} target="_blank" rel="noopener noreferrer">Créditos visuales</a>
         <button
           type="button"
           onClick={scrollToTop}

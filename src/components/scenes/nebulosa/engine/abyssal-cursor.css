@@ -1,0 +1,19 @@
+[data-amy-abyssal-cursor="on"], [data-amy-abyssal-cursor="on"] * { cursor: none !important; }
+.amy-abyssal-dot, .amy-abyssal-ring {
+  position: fixed; top: 0; left: 0; z-index: 300;
+  pointer-events: none; border-radius: 999px; will-change: transform;
+  box-sizing: border-box; mix-blend-mode: normal;
+}
+.amy-abyssal-dot { width: 4px; height: 4px; margin: -2px 0 0 -2px; background: #e8eef2; }
+.amy-abyssal-ring {
+  width: 26px; height: 26px; margin: -13px 0 0 -13px;
+  border: 1px solid rgba(232,238,242,.3);
+  transition: width .35s cubic-bezier(.16,1,.3,1), height .35s cubic-bezier(.16,1,.3,1),
+    margin .35s cubic-bezier(.16,1,.3,1), border-color .35s cubic-bezier(.16,1,.3,1);
+}
+.amy-abyssal-ring[data-hot="true"] { width: 48px; height: 48px; margin: -24px 0 0 -24px; border-color: #8ff0d8; }
+.amy-abyssal-dot[hidden], .amy-abyssal-ring[hidden] { display: none; }
+@media (pointer: coarse), (prefers-reduced-motion: reduce) {
+  [data-amy-abyssal-cursor="on"], [data-amy-abyssal-cursor="on"] * { cursor: auto !important; }
+  .amy-abyssal-dot, .amy-abyssal-ring { display: none; }
+}
