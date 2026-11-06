@@ -23,7 +23,7 @@ body { background: #000; }
 }
 /* Translated panels must not become Chrome's restoration/scroll anchor. */
 .nebulosa-flow-exit, .nebulosa-chapter { overflow-anchor: none; }
-.nebulosa-flow-exit { display: flow-root; position: relative; }
+.nebulosa-flow-exit { display: flow-root; position: relative; z-index: 4; }
 .nebulosa-flow-exit .grow-carousel-section {
   --gc-dwell: var(--nebulosa-dwell);
   /* The real portal has min-height640; add its excess to preserve the complete dwell. */
