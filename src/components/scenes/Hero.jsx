@@ -218,7 +218,7 @@ export default function Hero() {
       }
 
       const cs = getComputedStyle(runway.current);
-      const dwell = m.height * (Number(cs.getPropertyValue('--hero-dwell')) || 1.45);
+      const dwell = m.height * (Number(cs.getPropertyValue('--hero-dwell')) || .65);
       const wipeSpan = Math.max(1, m.height * (Number(cs.getPropertyValue('--hero-wipe-span')) || 1.85));
       const dwellEnd = travel + dwell;
       // La transición diagonal solo existe desde el Hero background asentado (progress >= 1), nunca sobre el vídeo de intro.

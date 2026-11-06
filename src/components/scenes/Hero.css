@@ -3,7 +3,7 @@
   --color-sand: #d3c8ba;
   --color-ink-deep: #171220;
   --hero-transition: 1.35;
-  --hero-dwell: 1.45;
+  --hero-dwell: .65;
   --hero-wipe-span: 1.85;
   position: relative;
   width: 100%;

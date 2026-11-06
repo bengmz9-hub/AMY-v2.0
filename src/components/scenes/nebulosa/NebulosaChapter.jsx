@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createNebulosaLayout, NEBULOSA_LAYOUT, evaluateNebulosa } from './phases.js';
+import { createNebulosaLayout, NEBULOSA_LAYOUT, HERO_DWELL_FALLBACK, evaluateNebulosa } from './phases.js';
 import './Nebulosa.css';
 import { mountAbyssalCursor } from './engine/abyssal-cursor.js';
 import { SOCIALS } from './engine/social-layout.js';
@@ -91,7 +91,7 @@ export default function NebulosaChapter() {
     function measure() {
       if (!flow || !portal) return;
       const heroStyle = hero && getComputedStyle(hero);
-      const dwell = Number(heroStyle?.getPropertyValue('--hero-dwell')) || 1.45;
+      const dwell = Number(heroStyle?.getPropertyValue('--hero-dwell')) || HERO_DWELL_FALLBACK;
       const layout = createNebulosaLayout(dwell);
       document.getElementById('main').style.setProperty('--nebulosa-dwell', String(dwell));
       document.getElementById('main').style.setProperty('--nebulosa-total', String(layout.totalH));

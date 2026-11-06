@@ -1,6 +1,6 @@
 // Native physical scroll schedule. One H is the measured viewport height.
 // Nebulosa keeps the formed portrait and socials visible for twice Hero's dwell.
-export const HERO_DWELL_FALLBACK = 1.45;
+export const HERO_DWELL_FALLBACK = .65;
 export function createNebulosaLayout(dwell = HERO_DWELL_FALLBACK) {
   const hold = Number.isFinite(Number(dwell)) && Number(dwell) > 0 ? Number(dwell) : HERO_DWELL_FALLBACK;
   const lengths = { flowHold: hold, flow: 1.15, black: .18, birth: .90, field: .55,
