@@ -7,6 +7,7 @@ import { createServer } from 'node:net';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { stripVTControlCharacters } from 'node:util';
 import { chromium } from 'playwright-core';
 
 assert(Number(process.versions.node.split('.')[0]) >= 22, 'Use Node 22 or newer.');
@@ -43,7 +44,7 @@ async function startPreview() {
   ], { cwd: root, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
   preview.on('error', error => { previewFailure = error; });
   for (const stream of [preview.stdout, preview.stderr]) {
-    stream.on('data', chunk => { previewLog = (previewLog + chunk.toString()).slice(-6000); });
+    stream.on('data', chunk => { previewLog = stripVTControlCharacters(previewLog + chunk.toString()).slice(-6000); });
   }
   const url = `http://127.0.0.1:${port}/AMY-v2.0/`;
   for (let attempt = 0; attempt < 100; attempt++) {
