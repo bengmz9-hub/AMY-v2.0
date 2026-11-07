@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
+const secureMathRandom = () => {
+  return window.crypto.getRandomValues(new Uint32Array(1))[0] / (0xFFFFFFFF + 1);
+};
+
 export default function AimTrainer() {
   const canvasRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -34,8 +38,8 @@ export default function AimTrainer() {
 
   const spawnTarget = (width, height) => {
     const margin = 30;
-    gameState.current.targetX = margin + Math.random() * (width - margin * 2);
-    gameState.current.targetY = margin + Math.random() * (height - margin * 2);
+    gameState.current.targetX = margin + secureMathRandom() * (width - margin * 2);
+    gameState.current.targetY = margin + secureMathRandom() * (height - margin * 2);
   };
 
   const createExplosion = (x, y, color) => {
@@ -43,11 +47,11 @@ export default function AimTrainer() {
       gameState.current.particles.push({
         x,
         y,
-        vx: (Math.random() - 0.5) * 2.5,
-        vy: (Math.random() - 0.5) * 2.5,
-        radius: Math.random() * 2.5 + 1.5,
+        vx: (secureMathRandom() - 0.5) * 2.5,
+        vy: (secureMathRandom() - 0.5) * 2.5,
+        radius: secureMathRandom() * 2.5 + 1.5,
         alpha: 1,
-        decay: Math.random() * 0.015 + 0.008,
+        decay: secureMathRandom() * 0.015 + 0.008,
         color,
       });
     }
