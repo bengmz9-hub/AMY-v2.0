@@ -14,6 +14,7 @@ const socialDestinations = {
   starvios: 'https://starvios.com/amyjgil',
 };
 let engineImport;
+const fallbackPortrait = new URL('./engine/assets/amy-rgba.png', import.meta.url).href;
 
 // Required DOM for the existing renderer. Its review controls remain mounted but hidden.
 // Engine styles are deliberately not imported: their html/body rules disable native scroll.
@@ -50,13 +51,16 @@ function EngineDOM({ children }) {
 export default function NebulosaChapter() {
   const chapter = useRef(null), viewport = useRef(null), screen = useRef(null);
   const about = useRef(null), recompositionCanvas = useRef(null);
+  const fallback = useRef(null), retryScene = useRef(null);
   const socialElements = useRef({}), socialHover = useRef(null), socialHint = useRef(null);
   const [error, setError] = useState('');
-  const state = useRef({ progress: 0, start: 0, span: 1, portalHeight: 0, ready: false, paused: false, reduced: false, active: false, engineStatus: 'loading', anchorSource: 'pending', layout: NEBULOSA_LAYOUT });
+  const [sceneFailure, setSceneFailure] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const state = useRef({ progress: 0, start: 0, span: 1, portalHeight: 0, ready: false, failed: false, paused: false, reduced: false, active: false, engineStatus: 'loading', anchorSource: 'pending', layout: NEBULOSA_LAYOUT });
 
   const releaseNarrativeFocus = event => {
     const focused = document.activeElement;
-    if (!about.current?.contains(focused) && !focused?.matches('a.nebulosa-social')) return;
+    if (!about.current?.contains(focused) && !fallback.current?.contains(focused) && !focused?.matches('a.nebulosa-social')) return;
     // Release before the narrative gesture, as in AgentCarousel, rather than
     // letting the outgoing inert panel blur focus halfway through the move.
     if (event.type === 'touchstart') {
@@ -74,7 +78,7 @@ export default function NebulosaChapter() {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0, poll = 0, disposed = false, previousEngineProgress = null, previousPause = null;
     let pendingFlowFocus = null, pendingSetupFocus = false, initialProgressApplied = false;
-    let recomposition, recompositionError = '', engineStarted = false;
+    let recomposition, recompositionError = '', engineStarted = false, retryPending = false;
     const ease = value => { const t = clamp(value); return t * t * (3 - 2 * t); };
 
     function measureRecomposition() {
@@ -203,6 +207,13 @@ export default function NebulosaChapter() {
       const api = window.amyReview;
       const engineVisible = s.ready && phase.birth > 0 && p < 1;
       const dissolve = s.reduced ? Number(closingProgress > 0) : ease(closingProgress / .17);
+      const fallbackVisible = s.failed && s.active && pan === 1 && phase.birth > 0 && dissolve < 1;
+      const releaseFallbackFocus = !fallbackVisible && fallback.current?.contains(document.activeElement);
+      screen.current.dataset.fallback = String(s.failed);
+      fallback.current.hidden = !fallbackVisible;
+      fallback.current.inert = !fallbackVisible;
+      fallback.current.setAttribute('aria-hidden', String(!fallbackVisible));
+      fallback.current.style.opacity = String(1 - dissolve);
       let stats = api?.getStats();
       if (s.ready && api) {
         api.setPresentationVisible?.(engineVisible && dissolve < 1);
@@ -242,6 +253,11 @@ export default function NebulosaChapter() {
         placeLabel(socialElements.current[social.id], anchors?.[social.id], s.ready ? labelsOpacity : 0, linksActive);
       }
       if (socialHint.current) socialHint.current.hidden = !linksActive;
+      if (releaseFallbackFocus) {
+        const next = linksActive && host.querySelector('a.nebulosa-social[data-link-active="true"]');
+        if (next) next.focus({ preventScroll: true });
+        else document.activeElement.blur();
+      }
 
     }
 
@@ -278,11 +294,14 @@ export default function NebulosaChapter() {
     }
     function checkEngine() {
       if (disposed) return;
+      clearTimeout(poll); poll = 0;
       const api = window.amyReview, stats = api?.getStats();
       state.current.engineStatus = stats?.status || 'loading';
       if (stats?.status === 'ready') {
         // Apply the current chapter state synchronously before revealing its first frame.
         state.current.ready = true;
+        state.current.failed = false;
+        setSceneFailure(false);
         api.setStoryProgress(state.current.progress);
         setError(recompositionError);
         if (!initialProgressApplied) {
@@ -293,12 +312,39 @@ export default function NebulosaChapter() {
         update();
       } else if (stats?.status === 'error') {
         state.current.ready = false;
-        // The renderer owns its accessible asset-error/retry UI. A second overlay
-        // here would cover its actual retry button.
+        state.current.failed = true;
+        setSceneFailure(true);
         setError('');
-        update(); poll = setTimeout(checkEngine, 250);
+        // A retry explicitly checks the renderer again; a permanent WebGL failure
+        // does not need an endless background poll.
+        update();
       } else poll = setTimeout(checkEngine, 150);
     }
+    retryScene.current = async () => {
+      if (disposed || retryPending) return;
+      const api = window.amyReview;
+      if (!api?.reloadAssets || document.getElementById('retry-btn').classList.contains('hidden')) {
+        location.reload();
+        return;
+      }
+      retryPending = true;
+      setRetrying(true);
+      try {
+        await api.reloadAssets();
+        if (!disposed) checkEngine();
+      } catch (cause) {
+        if (!disposed) {
+          console.error('No se ha podido reintentar la escena.', cause);
+          state.current.engineStatus = 'error';
+          state.current.failed = true;
+          setSceneFailure(true);
+          update();
+        }
+      } finally {
+        retryPending = false;
+        if (!disposed) setRetrying(false);
+      }
+    };
     measure(); update();
     // React mounts after native fragment resolution; target the physical final viewport.
     const initialSetupFrame = location.hash === '#gear' ? requestAnimationFrame(() => {
@@ -332,8 +378,9 @@ export default function NebulosaChapter() {
       }).catch(cause => {
         if (disposed) return;
         state.current.engineStatus = 'import-error';
+        state.current.failed = true;
         console.error('No se ha podido importar el motor Nebulosa.', cause);
-        setError('No se ha podido iniciar la escena. Vuelve a cargar la página para intentarlo de nuevo.'); update();
+        setError(''); setSceneFailure(true); update();
       });
     }
     // Prewarm near the chapter instead of downloading/allocating the portrait at Hero entry.
@@ -356,6 +403,7 @@ export default function NebulosaChapter() {
     host.addEventListener('nebulosa-pause', pauseEvent);
     return () => {
       disposed = true; cancelAnimationFrame(frame); clearTimeout(poll); observer.disconnect();
+      retryScene.current = null;
       engineObserver.disconnect();
       cancelAnimationFrame(initialSetupFrame);
       recomposition?.dispose();
@@ -402,6 +450,19 @@ export default function NebulosaChapter() {
         <p ref={socialHint} className="nebulosa-social-hint" hidden><strong>Mis redes</strong> · <span className="nebulosa-hint-desktop">Haz clic en un icono para visitar mi perfil</span><span className="nebulosa-hint-touch">Toca un icono para visitar mi perfil</span><span aria-hidden="true"> ↗</span></p>
         </EngineDOM>
         <canvas ref={recompositionCanvas} className="nebulosa-recomposition" aria-hidden="true" />
+        <section ref={fallback} className="nebulosa-fallback" aria-labelledby="amy-fallback-heading" hidden inert aria-hidden="true">
+          <div className="nebulosa-fallback__content">
+            {sceneFailure && <img src={fallbackPortrait} alt="" className="nebulosa-fallback__portrait" />}
+            <h2 id="amy-fallback-heading">AMY</h2>
+            <p role="status">{retrying ? 'Volviendo a cargar la escena…' : 'La escena no está disponible. Puedes seguir visitando mis redes.'}</p>
+            <nav aria-label="Redes de AMY">
+              {SOCIALS.filter(social => socialDestinations[social.id]).map(social => <a key={social.id}
+                data-fallback-social={social.id} href={socialDestinations[social.id]} target="_blank" rel="noopener noreferrer"
+                aria-label={`${social.label} de AMY (abre en otra pestaña)`}>{social.label}<span aria-hidden="true"> ↗</span></a>)}
+            </nav>
+            <button type="button" aria-disabled={retrying} aria-busy={retrying} onClick={() => retryScene.current?.()}>Volver a intentar</button>
+          </div>
+        </section>
         {error && <div className="nebulosa-import-error" role="alert"><p>{error}</p><button type="button" onClick={() => location.reload()}>Volver a cargar la escena</button></div>}
         </div>
       </div>

@@ -47,6 +47,8 @@
   padding: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  /* Keep native focus below the document's 90px scroll padding and 82px inset. */
+  scroll-padding-top: 8px;
   touch-action: pan-y;
   scrollbar-width: thin;
   scrollbar-color: #95c8df70 transparent;
@@ -100,6 +102,7 @@
 .agent-arsenal .arsenal-tools button:hover { color: #eafaff; }
 .agent-arsenal .arsenal-tools button:disabled { opacity: .55; cursor: default; text-decoration: none; }
 .agent-arsenal :is(button, a) { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.agent-arsenal .helix-portrait { touch-action: pan-y; }
 .agent-arsenal .arsenal-tools button:focus-visible { outline: 2px solid #d5f5ff; outline-offset: 4px; }
 
 /* Neutralize the site's generic section spacing only on these nested panels. */

@@ -641,7 +641,7 @@ function updateCameraFrustum() {
 // Intenta cargar el activo semántico de peso capilar preparado por Astra si está disponible en ./assets/
 async function tryLoadSemanticHairAsset(_meta, width, height) {
   const source = ASSETS.hairUrl;
-  const response = await fetch(source, {cache: 'no-store'});
+  const response = await fetch(source);
   if (!response.ok) throw new Error('No se pudo cargar la máscara del cabello');
   const buffer = await response.arrayBuffer();
   if (buffer.byteLength !== width * height * 4) throw new Error('La máscara del cabello no coincide con la fotografía');
@@ -1435,8 +1435,8 @@ async function loadAndBuildAssets() {
 
   try {
     const [metaRes, depthRes] = await Promise.all([
-      fetch(ASSETS.metaUrl, { cache: 'no-store' }),
-      fetch(ASSETS.depthUrl, { cache: 'no-store' })
+      fetch(ASSETS.metaUrl),
+      fetch(ASSETS.depthUrl)
     ]);
 
     if (!metaRes.ok || !depthRes.ok) {

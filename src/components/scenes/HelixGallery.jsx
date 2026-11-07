@@ -117,8 +117,10 @@ export default function HelixGallery({ items, activeIndex = 0, onSelect, enabled
       if (!available()) return;
       endDrag();
       target = value;
-      propsRef.current.onSelect?.(modulo(Math.round(value), count));
+      const index = modulo(Math.round(value), count);
+      propsRef.current.onSelect?.(index);
       run();
+      return index;
     }
 
     const select = (index) => selectPhase(nearestPhase(index, visual, count));
@@ -262,7 +264,10 @@ export default function HelixGallery({ items, activeIndex = 0, onSelect, enabled
         if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
           event.preventDefault();
           event.stopPropagation();
-          controller.current?.step(event.key === 'ArrowRight' ? 1 : -1);
+          const index = controller.current?.step(event.key === 'ArrowRight' ? 1 : -1);
+          if (cardsRef.current.includes(event.target)) {
+            cardsRef.current[index]?.focus({ preventScroll: true });
+          }
         }
       }}
     >
@@ -276,14 +281,11 @@ export default function HelixGallery({ items, activeIndex = 0, onSelect, enabled
             ref={(node) => { cardsRef.current[index] = node; }}
             type="button"
             disabled={!enabled}
+            tabIndex={selected === index ? 0 : -1}
             aria-label={`${item.name}, ${String(index + 1).padStart(2, '0')} de ${count}`}
             aria-pressed={selected === index}
             style={{ background: item.fallbackBg }}
             onClick={() => controller.current?.select(index)}
-            onFocus={(event) => {
-              // Keyboard focus brings even the rear portraits into view.
-              if (event.currentTarget.matches(':focus-visible')) controller.current?.select(index);
-            }}
           >
             <img key={item.img} src={item.img} alt="" draggable="false" onError={(event) => { event.currentTarget.style.visibility = 'hidden'; }} />
             <span className="helix-matte" aria-hidden="true" />

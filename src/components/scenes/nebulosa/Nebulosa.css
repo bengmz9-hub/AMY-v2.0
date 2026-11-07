@@ -82,6 +82,31 @@ body { background: #000; }
 .nebulosa-chapter #status-message { font: 14px/1.5 system-ui, sans-serif; }
 .nebulosa-chapter button { min-height: 36px; border: 1px solid #6b5468; border-radius: 6px; background: #221d27; color: #f5eaf1; padding: 5px 10px; }
 .nebulosa-chapter #retry-btn { margin-top: 14px; }
+.nebulosa-screen[data-fallback='true'] #status-overlay { display: none !important; }
+.nebulosa-fallback {
+  position: absolute; inset: 0; z-index: 4; display: grid; place-content: center;
+  width: 100%; max-width: none; margin: 0; box-sizing: border-box;
+  padding: 86px 24px 24px; overflow-y: auto; pointer-events: auto;
+  color: #f4f4f5; background: radial-gradient(ellipse at 30% 45%, #38232966, transparent 65%), #08070a;
+  font: 400 14px/1.6 Inter, Arial, sans-serif;
+}
+.nebulosa-fallback[hidden] { display: none !important; }
+.nebulosa-fallback__content { display: grid; grid-template-columns: 160px minmax(0, 1fr); align-items: center; gap: 14px 28px; max-width: 680px; }
+.nebulosa-fallback__portrait { grid-row: 1 / 5; width: 160px; max-height: 300px; object-fit: contain; }
+.nebulosa-fallback h2 { margin: 0; font: 400 48px/1 Qadone, Arial, sans-serif; }
+.nebulosa-fallback p { margin: 0; color: #c4b9c0; }
+.nebulosa-fallback nav { display: flex; flex-wrap: wrap; gap: 8px; }
+.nebulosa-fallback a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 12px; border: 1px solid #c07a8b70; border-radius: 6px; color: #f4e7ed; text-decoration: none; }
+.nebulosa-fallback a:hover { background: #c07a8b22; }
+.nebulosa-fallback a:focus-visible { outline: 2px solid #e4b8d3; outline-offset: 3px; }
+.nebulosa-fallback button { justify-self: start; min-height: 44px; margin-top: 4px; }
+.nebulosa-fallback button[aria-disabled='true'] { opacity: .65; cursor: wait; }
+@media (max-width: 600px), (max-height: 600px) {
+  .nebulosa-fallback { place-content: start center; padding-top: 88px; }
+  .nebulosa-fallback__content { grid-template-columns: minmax(0, 1fr); max-width: 400px; gap: 12px; }
+  .nebulosa-fallback__portrait { grid-row: auto; width: 96px; max-height: 130px; }
+  .nebulosa-fallback h2 { font-size: 36px; }
+}
 .nebulosa-social {
   position: absolute; z-index: 2; left: 0; top: 0; margin: 0;
   transform: translateX(-50%); visibility: hidden; opacity: 0;

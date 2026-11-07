@@ -7,19 +7,19 @@
   <meta name="description" content="AMY: gameplay, una escena de Valorant y estética Rose gaming.">
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#0f0a0c">
-  <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; frame-src 'none'; connect-src 'self'; object-src 'none'; base-uri 'self';">
-  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=()">
+  <link rel="canonical" href="https://bengmz9-hub.github.io/AMY-v2.0/">
   <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/icons/favicon.svg">
   <link rel="manifest" href="site.webmanifest">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="es_ES">
   <meta property="og:site_name" content="AMY">
+  <meta property="og:url" content="https://bengmz9-hub.github.io/AMY-v2.0/">
   <meta property="og:title" content="AMY v2.0 | VALORANT">
   <meta property="og:description" content="Gameplay y una escena de Valorant con AMY.">
-  <meta property="og:image" content="assets/images/amy/amy-cutout.png">
+  <meta property="og:image" content="https://bengmz9-hub.github.io/AMY-v2.0/assets/images/amy/amy-cutout.png">
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1915">
   <meta property="og:image:height" content="821">
@@ -27,7 +27,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="AMY v2.0 | VALORANT">
   <meta name="twitter:description" content="Gameplay y una escena de Valorant con AMY.">
-  <meta name="twitter:image" content="assets/images/amy/amy-cutout.png">
+  <meta name="twitter:image" content="https://bengmz9-hub.github.io/AMY-v2.0/assets/images/amy/amy-cutout.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Antonio:wght@600;700&family=Cinzel:wght@400;700&family=Rajdhani:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
@@ -40,6 +40,53 @@
 </head>
 <body>
   <div id="root"></div>
+  <noscript>
+    <style>
+      body:has(.amy-noscript) { margin: 0; background: #08070a; color: #f4f4f5; }
+      .amy-noscript { min-height: 100dvh; display: grid; place-items: center; padding: clamp(16px, 4vw, 40px); box-sizing: border-box; background: radial-gradient(ellipse at 50% 20%, #1c1017 0%, #08070a 70%); color: #f4f4f5; font: 400 15px/1.6 Inter, system-ui, -apple-system, sans-serif; }
+      .amy-noscript *, .amy-noscript *::before, .amy-noscript *::after { box-sizing: border-box; }
+      .amy-noscript__card { width: min(100%, 640px); padding: clamp(18px, 5vw, 34px); border-radius: 20px; border: 1px solid rgba(192, 122, 139, 0.36); background: linear-gradient(165deg, rgba(28, 16, 23, 0.9), rgba(18, 17, 22, 0.96)); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65); overflow-wrap: anywhere; }
+      .amy-noscript__eyebrow { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; font: 700 12px/1.3 Rajdhani, system-ui, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; color: #e7b8c6; }
+      .amy-noscript__dot { width: 7px; height: 7px; border-radius: 50%; background: #2ee6a8; box-shadow: 0 0 8px #2ee6a8; }
+      .amy-noscript__title { margin: 0 0 12px; font: 700 clamp(32px, 8vw, 48px)/1.05 Antonio, Rajdhani, system-ui, sans-serif; letter-spacing: 0.04em; text-transform: uppercase; color: #f4f4f5; }
+      .amy-noscript__portrait { display: block; width: 100%; height: auto; margin: 0 0 16px; border-radius: 12px; border: 1px solid rgba(192, 122, 139, 0.28); background: #121116; }
+      .amy-noscript__copy { margin: 0 0 10px; color: #f4f4f5; font-size: 15px; }
+      .amy-noscript__note { margin: 14px 0 16px; color: #c7c0c4; font-size: 13.5px; }
+      .amy-noscript__links { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 10px; }
+      .amy-noscript__link, .amy-noscript__soon { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 10px 14px; border-radius: 12px; font: 600 14px/1.3 Inter, system-ui, sans-serif; text-decoration: none; }
+      .amy-noscript__link { border: 1px solid rgba(192, 122, 139, 0.42); background: rgba(255, 255, 255, 0.03); color: #f4f4f5; transition: background-color 0.2s ease, border-color 0.2s ease; }
+      .amy-noscript__link:hover { background: rgba(192, 122, 139, 0.18); border-color: #e7aabb; color: #ffffff; }
+      .amy-noscript__handle { font: 600 12px/1.2 Rajdhani, system-ui, sans-serif; letter-spacing: 0.06em; color: #e7b8c6; }
+      .amy-noscript__soon { border: 1px dashed rgba(192, 122, 139, 0.28); background: rgba(18, 17, 22, 0.6); color: #b5acb0; }
+      .amy-noscript__footer { margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; font-size: 12px; color: #b5acb0; }
+      .amy-noscript__footer a { color: #e7b8c6; text-underline-offset: 3px; }
+      .amy-noscript a:focus-visible { outline: 3px solid #2ee6a8; outline-offset: 3px; }
+    </style>
+    <main class="amy-noscript" aria-labelledby="amy-noscript-title">
+      <article class="amy-noscript__card">
+        <p class="amy-noscript__eyebrow"><span class="amy-noscript__dot" aria-hidden="true"></span> AMY J. GIL · SENTINEL / SAGE · PLATINO</p>
+        <h1 id="amy-noscript-title" class="amy-noscript__title">AMY</h1>
+        <img class="amy-noscript__portrait" src="assets/images/amy/amy-cutout.webp" alt="AMY en el fondo de Valorant" width="1915" height="821">
+        <p class="amy-noscript__copy">Soy AMY. Este es mi rincón de Valorant: clips y momentos dentro del juego.</p>
+        <p class="amy-noscript__copy">Main Sage en Platino. Dominio del control de terreno y soporte táctico en cada ronda.</p>
+        <p class="amy-noscript__note">Activa JavaScript para recorrer la escena interactiva completa. Puedes visitar directamente mis canales oficiales:</p>
+        <nav aria-label="Redes oficiales de AMY">
+          <ul class="amy-noscript__links">
+            <li><a class="amy-noscript__link" href="https://www.tiktok.com/@amyjgil" target="_blank" rel="noopener noreferrer"><span>TikTok</span><span class="amy-noscript__handle">@amyjgil ↗</span></a></li>
+            <li><a class="amy-noscript__link" href="https://www.youtube.com/@AmyJGil" target="_blank" rel="noopener noreferrer"><span>YouTube</span><span class="amy-noscript__handle">@AmyJGil ↗</span></a></li>
+            <li><a class="amy-noscript__link" href="https://www.twitch.tv/amyjgil" target="_blank" rel="noopener noreferrer"><span>Twitch</span><span class="amy-noscript__handle">/amyjgil ↗</span></a></li>
+            <li><a class="amy-noscript__link" href="https://kick.com/amyjgil" target="_blank" rel="noopener noreferrer"><span>Kick</span><span class="amy-noscript__handle">/amyjgil ↗</span></a></li>
+            <li><a class="amy-noscript__link" href="https://starvios.com/amyjgil" target="_blank" rel="noopener noreferrer"><span>Starvios</span><span class="amy-noscript__handle">/amyjgil ↗</span></a></li>
+            <li><span class="amy-noscript__soon" role="status"><span>Instagram</span><span class="amy-noscript__handle">Próximamente</span></span></li>
+          </ul>
+        </nav>
+        <footer class="amy-noscript__footer">
+          <span>PROTOCOL: 128HZ · PLATINO</span>
+          <a href="third-party-notices.txt">Créditos y licencias de terceros</a>
+        </footer>
+      </article>
+    </main>
+  </noscript>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
