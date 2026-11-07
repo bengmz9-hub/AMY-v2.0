@@ -99,14 +99,14 @@ export default function AimTrainer() {
     }
 
     // Partículas
-    for (let i = st.particles.length - 1; i >= 0; i--) {
+    let pWriteIdx = 0;
+    for (let i = 0; i < st.particles.length; i++) {
       const p = st.particles[i];
       p.x += p.vx;
       p.y += p.vy;
       p.alpha -= p.decay;
-      if (p.alpha <= 0) {
-        st.particles.splice(i, 1);
-      } else {
+      if (p.alpha > 0) {
+        st.particles[pWriteIdx++] = p;
         ctx.save();
         ctx.globalAlpha = p.alpha;
         ctx.fillStyle = p.color;
@@ -116,15 +116,16 @@ export default function AimTrainer() {
         ctx.restore();
       }
     }
+    st.particles.length = pWriteIdx;
 
     // Textos flotantes
-    for (let i = st.floatingTexts.length - 1; i >= 0; i--) {
+    let ftWriteIdx = 0;
+    for (let i = 0; i < st.floatingTexts.length; i++) {
       const ft = st.floatingTexts[i];
       ft.y += ft.vy;
       ft.alpha -= 0.02;
-      if (ft.alpha <= 0) {
-        st.floatingTexts.splice(i, 1);
-      } else {
+      if (ft.alpha > 0) {
+        st.floatingTexts[ftWriteIdx++] = ft;
         ctx.save();
         ctx.globalAlpha = ft.alpha;
         ctx.fillStyle = ft.color;
@@ -134,15 +135,16 @@ export default function AimTrainer() {
         ctx.restore();
       }
     }
+    st.floatingTexts.length = ftWriteIdx;
 
     // Hitmarkers tácticos (Valorant hit-feedback)
     if (st.hitmarkers) {
-      for (let i = st.hitmarkers.length - 1; i >= 0; i--) {
+      let hmWriteIdx = 0;
+      for (let i = 0; i < st.hitmarkers.length; i++) {
         const hm = st.hitmarkers[i];
         hm.alpha -= 0.08;
-        if (hm.alpha <= 0) {
-          st.hitmarkers.splice(i, 1);
-        } else {
+        if (hm.alpha > 0) {
+          st.hitmarkers[hmWriteIdx++] = hm;
           ctx.save();
           ctx.globalAlpha = hm.alpha;
           ctx.strokeStyle = '#ffffff';
@@ -157,6 +159,7 @@ export default function AimTrainer() {
           ctx.restore();
         }
       }
+      st.hitmarkers.length = hmWriteIdx;
     }
 
     // Retícula / Mira del usuario
