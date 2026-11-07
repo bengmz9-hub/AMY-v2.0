@@ -352,6 +352,7 @@
 .jj-hud-cross--bl { bottom: 0; left: 0; }
 .jj-hud-cross--br { bottom: 0; right: 0; }
 .jj-overlay-footer { gap: 16px; flex-shrink: 0; }
+.jj-overlay-footer a { color: inherit; text-underline-offset: 3px; }
 .jj-footer-sep { margin-inline: 8px; opacity: 0.4; }
 .jj-footer-description { opacity: 0.8; }
 .jj-footer-status { color: #2ee6a8; text-align: center; }

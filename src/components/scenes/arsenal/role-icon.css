@@ -1,0 +1,24 @@
+.role-particle-icon {
+  --role-icon-color: #c6f5ff;
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 420px);
+  aspect-ratio: 1;
+  min-width: 0;
+  margin-inline: auto;
+  background: transparent;
+  border: 0;
+}
+.role-particle-icon__fallback { position: absolute; inset: 2.5%; width: 95%; height: 95%; fill: var(--role-icon-color); pointer-events: none; }
+.role-particle-icon[data-icon-ready='true'] .role-particle-icon__fallback { visibility: hidden; }
+.role-particle-icon__unknown { position: absolute; inset: 0; display: grid; place-items: center; padding: 10px; color: var(--role-icon-color); font: 400 14px/1.5 Inter, system-ui, sans-serif; text-align: center; overflow-wrap: anywhere; }
+.role-particle-icon__canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; background: transparent; filter: drop-shadow(0 0 6px rgb(102 218 255 / .75)) drop-shadow(0 0 32px rgb(37 133 255 / .98)); }
+@media (max-width: 760px) {
+  .role-particle-icon { width: min(100%, 210px); }
+  .role-particle-icon__canvas { filter: drop-shadow(0 0 4px rgb(102 218 255 / .7)) drop-shadow(0 0 20px rgb(37 133 255 / .9)); }
+}
+@media (forced-colors: active) {
+  .role-particle-icon .role-particle-icon__canvas { visibility: hidden; }
+  .role-particle-icon[data-icon-ready] .role-particle-icon__fallback { visibility: visible; fill: CanvasText; }
+  .role-particle-icon .role-particle-icon__unknown { color: CanvasText; }
+}

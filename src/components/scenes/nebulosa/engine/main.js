@@ -404,6 +404,7 @@ const state = {
   time: 0,
   assembly: 0,
   motionPaused: false,
+  presentationVisible: true,
   motionReview: false,
   motionIntensity: 1,
   storyProgress: null,
@@ -498,11 +499,6 @@ const postFrameOptions = {
   time: 0,
   mode: state.mode
 };
-const motionRaycaster = new THREE.Raycaster();
-const motionLocalRay = new THREE.Ray();
-const motionInverse = new THREE.Matrix4();
-const motionNdc = new THREE.Vector2();
-const motionHit = new THREE.Vector3();
 
 function getStoryStats() {
   const phase = state.storyProgress === null
@@ -517,29 +513,6 @@ function updateMotionButton() {
   dom.motionBtn.textContent = state.motionPaused ? 'Animar' : 'Pausar';
   dom.motionBtn.setAttribute('aria-pressed', String(state.motionPaused));
   dom.motionBtn.setAttribute('aria-label', state.motionPaused ? 'Reanudar animación' : 'Pausar animación');
-}
-
-function updateLocalPointer(dt) {
-  if (!loadedAssets || !portraitGroup) return;
-  motionNdc.set(state.mouseUV.x * 2 - 1, state.mouseUV.y * 2 - 1);
-  motionRaycaster.setFromCamera(motionNdc, camera);
-  motionInverse.copy(portraitGroup.matrixWorld).invert();
-  motionLocalRay.copy(motionRaycaster.ray).applyMatrix4(motionInverse);
-  if (Math.abs(motionLocalRay.direction.z) < 1e-5) return;
-  const { width, height, fields } = loadedAssets;
-  const portraitWidth = 2 * width / height;
-  let surfaceZ = 0;
-  // Refine against the existing relative-depth field, rather than a screen-space circle.
-  for (let i = 0; i < 3; i++) {
-    const distance = (surfaceZ - motionLocalRay.origin.z) / motionLocalRay.direction.z;
-    motionHit.copy(motionLocalRay.direction).multiplyScalar(distance).add(motionLocalRay.origin);
-    const px = clamp(Math.round((motionHit.x / portraitWidth + 0.5) * width), 0, width - 1);
-    const py = clamp(Math.round((0.5 - motionHit.y * 0.5) * height), 0, height - 1);
-    surfaceZ = (fields.cleanDepth[py * width + px] - 0.56) * state.depthScale * portraitWidth;
-  }
-  const blend = state.motionReview ? 1 : 1 - Math.exp(-dt * 13);
-  state.pointerLocal.x += (motionHit.x - state.pointerLocal.x) * blend;
-  state.pointerLocal.y += (motionHit.y - state.pointerLocal.y) * blend;
 }
 
 function initThree() {
@@ -1583,6 +1556,27 @@ function applyPoseImmediate(yawDeg, pitchDeg) {
 let lastFrameTime = performance.now();
 let fpsAccum = 0;
 let fpsFrames = 0;
+let rafId = 0;
+
+function shouldAnimate() {
+  return state.status === 'ready' && !state.frozen && !state.reducedMotion
+    && !state.motionPaused && state.mode === 'portrait'
+    && !document.hidden && Boolean(dom.canvas?.isConnected);
+}
+
+function syncAnimationLoop() {
+  if (!shouldAnimate()) {
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    }
+    return;
+  }
+  if (!rafId) {
+    lastFrameTime = performance.now();
+    rafId = requestAnimationFrame(animationLoop);
+  }
+}
 
 function renderFrameSync(dt = 0.016) {
   if (!renderer || !scene || !camera || !postProcessor) return;
@@ -1654,6 +1648,11 @@ function renderFrameSync(dt = 0.016) {
     paused: state.motionPaused, pixelRatio: renderer.getPixelRatio() });
   deepSpace?.update({ phase, time: state.time, mode: state.mode, reduced: state.reducedMotion,
     pointer: state.mouseUV, pointerStrength: state.pointerStrength, paused: state.motionPaused });
+  if (!state.presentationVisible) {
+    state.renderCalls = 0;
+    syncAnimationLoop();
+    return;
+  }
   deepSpace?.render();
 
   postFrameOptions.rippleStrength = 0;
@@ -1677,10 +1676,14 @@ function renderFrameSync(dt = 0.016) {
   } else postProcessor.render(scene, camera, postFrameOptions);
 
   state.renderCalls = renderer.info.render.calls;
+  syncAnimationLoop();
 }
 
 function animationLoop(now) {
-  requestAnimationFrame(animationLoop);
+  if (!shouldAnimate()) {
+    rafId = 0;
+    return;
+  }
   const dt = clamp((now - lastFrameTime) / 1000, 0.001, 0.1);
   lastFrameTime = now;
 
@@ -1692,10 +1695,12 @@ function animationLoop(now) {
     fpsFrames = 0;
   }
 
-  if (state.status === 'ready' && !state.frozen && !state.reducedMotion
-    && !state.motionPaused && state.mode === 'portrait') {
-    renderFrameSync(dt);
+  renderFrameSync(dt);
+  if (!shouldAnimate()) {
+    rafId = 0;
+    return;
   }
+  rafId = requestAnimationFrame(animationLoop);
 }
 
 function bindInteraction() {
@@ -1709,7 +1714,10 @@ function bindInteraction() {
     if (state.status === 'ready') renderFrameSync(0);
   };
   window.addEventListener('blur', clearPointerInput);
-  document.addEventListener('visibilitychange', () => {if (document.hidden) clearPointerInput();});
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) clearPointerInput();
+    syncAnimationLoop();
+  });
   window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', e => {
     state.reducedMotion = e.matches;
     state.targetYawDeg = 0;
@@ -1824,6 +1832,7 @@ window.amyReview = {
       error: state.error,
       mode: state.mode,
       frozen: state.frozen,
+      presentationVisible: state.presentationVisible,
       yawDeg: Math.round(state.yawDeg * 1000) / 1000,
       pitchDeg: Math.round(state.pitchDeg * 1000) / 1000,
       depthScale: state.depthScale,
@@ -1944,6 +1953,14 @@ window.amyReview = {
     renderFrameSync(0);
     return this.getStats();
   },
+  setPresentationVisible(visible = true) {
+    const next = Boolean(visible);
+    if (state.presentationVisible === next) return this.getStats();
+    state.presentationVisible = next;
+    if (next) renderFrameSync(0);
+    else state.renderCalls = 0;
+    return this.getStats();
+  },
   setMotionIntensity(amount = 1) {
     state.motionIntensity = clamp(Number(amount) || 0, 0, 1.25);
     renderFrameSync(0);
@@ -1980,6 +1997,7 @@ window.amyReview = {
   reset() {
     state.frozen = false;
     state.motionPaused = false;
+    state.presentationVisible = true;
     state.motionReview = false;
     state.pointerActive = false;
     state.pointerStrength = 0;
@@ -2015,7 +2033,6 @@ window.amyReview = {
 if (initThree()) {
   bindInteraction();
   loadAndBuildAssets().then(() => {
-    lastFrameTime = performance.now();
-    requestAnimationFrame(animationLoop);
+    syncAnimationLoop();
   });
 }

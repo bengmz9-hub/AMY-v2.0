@@ -21,6 +21,7 @@
   left: 0;
   width: 1px;
   height: 1px;
+  scroll-margin-top: -90px;
   pointer-events: none;
 }
 

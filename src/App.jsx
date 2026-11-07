@@ -1,19 +1,13 @@
 import NavbarJJettas from '@/components/layout/NavbarJJettas.jsx';
-import Footer from '@/components/layout/Footer.jsx';
 import Hero from '@/components/scenes/Hero.jsx';
 import AgentCarousel from '@/components/scenes/AgentCarousel.jsx';
 import NebulosaChapter from '@/components/scenes/nebulosa/NebulosaChapter.jsx';
-import Stats from '@/components/sections/Stats.jsx';
-import SetupGear from '@/components/sections/SetupGear.jsx';
-import AmyShow from '@/components/sections/AmyShow.jsx';
 import { useNarrativeScroll } from '@/hooks/useNarrativeScroll.js';
 import { useScrollProgress } from '@/hooks/useScrollProgress.js';
-import { useIntersectionFade } from '@/hooks/useIntersectionFade.js';
 
 export default function App() {
   useScrollProgress();
   useNarrativeScroll();
-  useIntersectionFade();
 
   return (
     <>
@@ -25,12 +19,8 @@ export default function App() {
         <Hero />
         <div className="nebulosa-flow-exit"><AgentCarousel /></div>
         <NebulosaChapter />
-        <Stats />
-        <SetupGear />
-        <AmyShow />
       </main>
 
-      <Footer />
     </>
   );
 }

@@ -6,12 +6,9 @@ const LINK_ROWS = [
   [
     { href: '#amy-home', label: 'Inicio' },
     { href: '#agents', label: 'Especialidades' },
-    { href: '#gear', label: 'Setup & Gear' },
-    { href: '#sensCanvas', label: 'Aim Trainer' },
   ],
   [
-    { href: '#shorts', label: 'Amy Show' },
-    { href: '#stats', label: 'Estadísticas' },
+    { href: '#gear', label: 'Setup' },
     { href: 'https://www.twitch.tv/amyjgil', label: 'Directos', external: true },
   ],
 ];
@@ -191,7 +188,7 @@ export default function NavbarJJettas() {
           </div>
         </div>
         <footer className="jj-overlay-footer">
-          <div>© 2026 AMYJGIL <span className="jj-footer-sep">·</span> <span className="jj-footer-description">VALORANT CREATOR ECOSYSTEM</span></div>
+          <div>© 2026 AMYJGIL <span className="jj-footer-sep">·</span> <span className="jj-footer-description">VALORANT CREATOR ECOSYSTEM</span><span className="jj-footer-sep">·</span><a href={`${import.meta.env.BASE_URL}third-party-notices.txt`} target="_blank" rel="noopener noreferrer" onClick={navigate}>Créditos visuales</a></div>
           <div className="jj-footer-status">{PROFILE.statusText}</div>
           <div className="jj-footer-protocol">
             <span>{PROFILE.protocolFooter}</span>

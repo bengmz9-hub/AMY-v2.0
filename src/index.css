@@ -63,12 +63,6 @@ section {
   margin: 0 auto;
 }
 
-.stats-section {
-  position: relative;
-  padding: 3rem 5vw;
-  z-index: 2;
-  background: var(--bg-dark);
-}
 
 /* Asegura que el último elemento de cada sección no tenga margen extra */
 section > :last-child {
@@ -76,50 +70,8 @@ section > :last-child {
 }
 
 /* Títulos de sección */
-.section-title {
-  text-align: center;
-  margin-bottom: 3rem;
-}
-.section-title h2 {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 2.5rem;
-  font-weight: 800;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  display: inline-block;
-  position: relative;
-}
-.section-title h2 .highlight {
-  color: var(--accent);
-  background: linear-gradient(135deg, var(--accent), #ff9de9);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.section-title h2::after {
-  content: '';
-  display: block;
-  width: 60px;
-  height: 3px;
-  background: var(--accent);
-  margin: 0.8rem auto 0;
-  border-radius: 10px;
-}
-.section-title p {
-  font-size: 1.1rem;
-  max-width: 700px;
-  margin: 0.8rem auto 0;
-  color: var(--text-sub);
-}
 
 /* ===== GEAR ===== */
-.gear-filters {
-  display: flex;
-  justify-content: center;
-  gap: 0.8rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-}
 
 .filter-btn {
   background: transparent;
@@ -176,301 +128,20 @@ section > :last-child {
 }
 
 /* Clips — contenedor actual */
-.tiktok-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
-  width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
-  justify-items: center;
-  align-items: start;
-}
-.tiktok-wrapper {
-  background: var(--bg-card);
-  padding: 1.25rem 1rem;
-  border-radius: 28px;
-  border: 1px solid var(--glass-border);
-  transition: var(--transition);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  width: 100%;
-  max-width: 330px;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-.tiktok-wrapper:hover {
-  border-color: var(--accent);
-  transform: translateY(-6px);
-}
-.clip-title {
-  margin: 0.85rem auto 0;
-  width: 100%;
-  max-width: 290px;
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 0.95rem;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--text-main, #fff);
-  text-align: center;
-  letter-spacing: 0.3px;
-}
-@media (max-width: 1024px) {
-  .tiktok-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (max-width: 640px) {
-  .tiktok-grid {
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
-  }
-  .tiktok-wrapper {
-    max-width: 320px;
-  }
-}
 
 /* =========================================================================
    FOOTER: Tactical HUD Command Terminal (Opción A)
    ========================================================================= */
-.footer-hud {
-  background: #08070a;
-  border-top: none;
-  padding: 3.5rem 5vw 2rem;
-  position: relative;
-  overflow: hidden;
-  margin-top: 4rem;
-}
-.hud-top-bar {
-  max-width: 1200px;
-  margin: 0 auto 2rem;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px dashed rgba(192, 122, 139, 0.25);
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 0.85rem;
-}
-.hud-status {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-}
-.hud-led-platino {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #2ee6a8;
-  box-shadow: 0 0 10px #2ee6a8;
-  animation: fab-pulse 2s infinite ease-in-out;
-}
-.hud-status-text {
-  color: #2ee6a8;
-}
-.hud-telemetry-pill {
-  color: var(--text-sub);
-  letter-spacing: 0.08em;
-  display: flex;
-  gap: 0.6rem;
-}
-.hud-sep { color: rgba(255, 255, 255, 0.2); }
 .text-platino { color: #2ee6a8; font-weight: 700; }
 .text-pink { color: var(--accent); font-weight: 700; }
 
-.hud-grid {
-  max-width: 1200px;
-  margin: 0 auto 2.5rem;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
-}
-.hud-module {
-  position: relative;
-  background: rgba(18, 17, 22, 0.6);
-  border: 1px solid rgba(192, 122, 139, 0.2);
-  padding: 1.25rem 1.1rem;
-  border-radius: 4px;
-}
-.hud-corner {
-  position: absolute;
-  width: 6px;
-  height: 6px;
-  border-color: var(--accent);
-  border-style: solid;
-}
-.hud-corner.top-l { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
-.hud-corner.top-r { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
-.hud-corner.bot-l { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
-.hud-corner.bot-r { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
 
-.hud-mod-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.8rem;
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
-}
-.hud-mod-num { color: var(--accent); font-weight: 700; }
-.hud-mod-tag { color: var(--text-sub); }
-.hud-title {
-  font-family: 'Cinzel', serif;
-  font-size: 1.4rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: var(--text-main);
-  margin-bottom: 0.3rem;
-}
-.hud-desc {
-  font-size: 0.82rem;
-  color: var(--text-sub);
-  margin-bottom: 0.8rem;
-  line-height: 1.4;
-}
-.hud-callsign-box {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 0.78rem;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 0.5rem 0.6rem;
-  border-left: 2px solid var(--accent);
-}
-.hud-nav-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-.hud-nav-link {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--text-sub);
-  text-decoration: none;
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 0.88rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
-}
-.hud-bullet { color: var(--accent); opacity: 0.6; transition: transform 0.2s ease; }
-.hud-nav-link:hover { color: var(--text-main); transform: translateX(3px); }
-.hud-nav-link:hover .hud-bullet { opacity: 1; color: #2ee6a8; }
 
-.hud-social-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-.hud-social-item {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.5rem 0.7rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--glass-border);
-  border-radius: 4px;
-  color: var(--text-main);
-  text-decoration: none;
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  transition: all 0.2s ease;
-}
-.hud-social-item:hover {
-  background: rgba(192, 122, 139, 0.15);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.hud-link-arrow { margin-left: auto; color: var(--text-sub); }
 
-.hud-stat-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.4rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 0.85rem;
-}
-.hud-stat-label { color: var(--text-sub); font-size: 0.75rem; letter-spacing: 0.08em; }
-.hud-stat-val { font-weight: 700; font-size: 0.95rem; }
 
-.hud-bottom-bar {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-.hud-copy {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 0.78rem;
-  letter-spacing: 0.1em;
-  color: var(--text-sub);
-}
-.hud-top-btn {
-  background: rgba(18, 17, 22, 0.9);
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.hud-top-btn:hover {
-  background: var(--accent);
-  color: #08070a;
-  box-shadow: 0 0 15px rgba(192, 122, 139, 0.4);
-}
 
-@media (max-width: 900px) {
-  .hud-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (max-width: 640px) {
-  .hud-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  .hud-top-bar, .hud-bottom-bar {
-    flex-direction: column;
-    text-align: center;
-    gap: 0.8rem;
-  }
-}
 
 /* Animaciones */
-.fade-in-section {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.7s ease, transform 0.7s ease;
-}
-.fade-in-section.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
 
 /* ---------------------------------- */
 /* ACCESIBILIDAD: ENFOQUE DE TECLADO  */
@@ -484,218 +155,21 @@ a:focus-visible,
 }
 @media (max-width: 640px) {
   section { padding: 3.5rem 4vw; }
-  .stats-section { padding: 2.2rem 4vw; }
-  .bento-card {
-    padding: 1.4rem 1rem;
-  }
-  .bga-card {
-    padding: 1.25rem 1rem;
-  }
 }
 
 /* ============================================================
    bento-STATS — OPCIÓN C: Tarjetas glass elegante
    Grid 4/2/1 · fondo semi-solido sin blur · borde 20px
    ============================================================ */
-.bento-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1.5rem;
-}
-@media (max-width: 1024px) {
-  .bento-grid { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 600px) {
-  .bento-grid { grid-template-columns: 1fr; }
-}
-.bento-card {
-  position: relative;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--glass-border);
-  border-top: 2px solid rgba(192, 122, 139, 0.55);
-  border-radius: 20px;
-  padding: 2rem 1.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.85rem;
-  transition: var(--transition);
-  overflow: hidden;
-}
-.bento-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 20px;
-  pointer-events: none;
-  transition: background 0.3s ease;
-}
-.bento-card:hover {
-  border-color: var(--accent);
-  background: rgba(255, 255, 255, 0.04);
-}
-.bento-card-accent {
-  display: none;
-}
-.bento-card-icon {
-  width: 28px;
-  height: 28px;
-  color: #d4a8b4;
-}
-.bento-card-icon svg {
-  width: 100%;
-  height: 100%;
-}
-.bento-card-number {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 2.8rem;
-  font-weight: 800;
-  color: #d4a8b4;
-  letter-spacing: -0.5px;
-  line-height: 1;
-}
-.bento-card-label {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  color: var(--text-sub);
-  font-weight: 600;
-  text-align: center;
-}
 
 /* ============================================================
    GEAR BENTO — OPCIÓN A: Asimétrico 12-col (bga-*)
    Featured 8+4, rows auto. Jerarquía clara, sin tiles.
    ============================================================ */
-.bga-grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 1.5rem;
-}
-.bga-card {
-  background: var(--bg-card);
-  border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  padding: 1.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  transition: border-color 0.3s cubic-bezier(0.16,1,0.3,1), transform 0.3s cubic-bezier(0.16,1,0.3,1);
-}
-.bga-card:hover {
-  border-color: var(--accent);
-  transform: translateY(-3px);
-}
-.bga-card-label {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  color: var(--text-sub);
-  font-weight: 600;
-}
-.bga-card-value {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--text-main);
-  letter-spacing: -0.5px;
-  line-height: 1.15;
-}
-.bga-card-spec {
-  font-size: 0.85rem;
-  color: var(--text-sub);
-  line-height: 1.4;
-}
-.bga-card-status {
-  margin-top: 0.4rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #4ade80;
-}
-.bga-feat {
-  grid-column: span 8;
-}
-.bga-feat .bga-card-value {
-  font-size: 2.4rem;
-}
-.bga-feat .bga-card-spec {
-  font-size: 0.95rem;
-}
-.bga-half {
-  grid-column: span 4;
-}
-.bga-wide {
-  grid-column: span 8;
-}
-.bga-bar {
-  margin-top: 0.8rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 20px;
-  height: 4px;
-  overflow: hidden;
-}
-.bga-bar-fill {
-  height: 100%;
-  background: var(--accent);
-  border-radius: 20px;
-}
-@media (max-width: 1024px) {
-  .bga-grid { gap: 1rem; }
-  .bga-feat, .bga-wide { grid-column: span 12; }
-  .bga-half { grid-column: span 6; }
-}
-@media (max-width: 640px) {
-  .bga-feat, .bga-wide, .bga-half { grid-column: span 12; }
-}
 /* WordReveal: cada palabra del título se revela en cascada al entrar en viewport */
-.wr .wr-seg { display: block; }
-.wr .wr-word {
-  display: inline-block;
-  opacity: 0;
-  transform: translateY(0.5em);
-  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.wr.wr-visible .wr-word {
-  opacity: 1;
-  transform: translateY(0);
-}
 /* Modo letters (Create®): cada letra se revela en cascada */
-.wr .wr-letter {
-  display: inline-block;
-  opacity: 0;
-  transform: translateY(0.35em);
-  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.wr.wr-visible .wr-letter {
-  opacity: 1;
-  transform: translateY(0);
-}
 /* Stagger de las bento cards de Stats (entran en cascada) */
-.stats-section .bento-card {
-  opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.stats-section.stats-in .bento-card {
-  opacity: 1;
-  transform: translateY(0);
-}
 /* Reduced motion: sin reveals (todo visible) */
-@media (prefers-reduced-motion: reduce) {
-  .wr .wr-word,
-  .wr .wr-letter,
-  .stats-section .bento-card {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-}
 
 @media (max-width: 640px) {
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createNebulosaLayout, NEBULOSA_LAYOUT, HERO_DWELL_FALLBACK, evaluateNebulosa } from './phases.js';
 import './Nebulosa.css';
+import SetupConstruction from './SetupConstruction.jsx';
 import { mountAbyssalCursor } from './engine/abyssal-cursor.js';
 import { SOCIALS } from './engine/social-layout.js';
 import { SOCIAL_LINKS } from '@/data/profile.js';
@@ -53,6 +54,17 @@ export default function NebulosaChapter() {
   const [error, setError] = useState('');
   const state = useRef({ progress: 0, start: 0, span: 1, portalHeight: 0, ready: false, paused: false, reduced: false, active: false, engineStatus: 'loading', anchorSource: 'pending', layout: NEBULOSA_LAYOUT });
 
+  const releaseNarrativeFocus = event => {
+    const focused = document.activeElement;
+    if (!about.current?.contains(focused) && !focused?.matches('a.nebulosa-social')) return;
+    // Release before the narrative gesture, as in AgentCarousel, rather than
+    // letting the outgoing inert panel blur focus halfway through the move.
+    if (event.type === 'touchstart') {
+      if (event.touches.length === 1) document.activeElement.blur();
+    } else if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey
+      && event.deltaY < -Math.abs(event.deltaX)) document.activeElement.blur();
+  };
+
   useEffect(() => {
     const host = chapter.current, view = viewport.current, stage = document.getElementById('stage');
     const flow = document.querySelector('.grow-carousel-section');
@@ -61,8 +73,8 @@ export default function NebulosaChapter() {
     const hero = document.querySelector('.amy-hero');
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0, poll = 0, disposed = false, previousEngineProgress = null, previousPause = null;
-    let pendingFlowFocus = null, initialProgressApplied = false;
-    let recomposition, recompositionError = '';
+    let pendingFlowFocus = null, pendingSetupFocus = false, initialProgressApplied = false;
+    let recomposition, recompositionError = '', engineStarted = false;
     const ease = value => { const t = clamp(value); return t * t * (3 - 2 * t); };
 
     function measureRecomposition() {
@@ -79,17 +91,32 @@ export default function NebulosaChapter() {
       for (let y = 0; y < height; y += 3) for (let x = 0; x < width; x += 3) {
         if (pixels[(y * width + x) * 4 + 3] > 140) targets.push([x / width, y / height]);
       }
-      for (const panel of about.current.querySelectorAll('.amy-about-panel')) {
-        const r = panel.getBoundingClientRect(), left = r.left - box.left, top = r.top - box.top;
-        const right = r.right - box.left, bottom = r.bottom - box.top;
-        for (let x = left; x < right; x += 5) targets.push([x / width, top / height], [x / width, bottom / height]);
-        for (let y = top; y < bottom; y += 5) targets.push([left / width, y / height], [right / width, y / height]);
+      const outlines = about.current.querySelectorAll('[data-recomposition-path]');
+      if (outlines.length) {
+        for (const outline of outlines) {
+          const matrix = outline.getScreenCTM();
+          if (!matrix) continue;
+          const length = outline.getTotalLength(), scale = Math.hypot(matrix.a, matrix.b);
+          const steps = Math.max(1, Math.ceil(length * scale / 5));
+          for (let step = 0; step <= steps; step += 1) {
+            const point = outline.getPointAtLength(length * step / steps).matrixTransform(matrix);
+            targets.push([(point.x - box.left) / width, (point.y - box.top) / height]);
+          }
+        }
+      } else {
+        for (const panel of about.current.querySelectorAll('.amy-about-panel')) {
+          const r = panel.getBoundingClientRect(), left = r.left - box.left, top = r.top - box.top;
+          const right = r.right - box.left, bottom = r.bottom - box.top;
+          for (let x = left; x < right; x += 5) targets.push([x / width, top / height], [x / width, bottom / height]);
+          for (let y = top; y < bottom; y += 5) targets.push([left / width, y / height], [right / width, y / height]);
+        }
       }
       recomposition.resize(width, height, targets);
     }
 
     function measure() {
       if (!flow || !portal) return;
+      const keepEnd = state.current.closingProgress === 1;
       const heroStyle = hero && getComputedStyle(hero);
       const dwell = Number(heroStyle?.getPropertyValue('--hero-dwell')) || HERO_DWELL_FALLBACK;
       const layout = createNebulosaLayout(dwell);
@@ -113,6 +140,7 @@ export default function NebulosaChapter() {
         nebulosaHoldEnd: start + layout.distances.hold[1] * innerHeight,
         heroDwell: dwell, heroDwellPixels: holdPixels,
         flowRelease: staticFlow ? start : flowBottom - portalHeight });
+      if (keepEnd) scrollTo({ top: start + span, behavior: 'instant' });
       measureRecomposition();
       schedule();
     }
@@ -142,6 +170,8 @@ export default function NebulosaChapter() {
     function update() {
       frame = 0;
       const s = state.current;
+      // The outgoing Flow transform moves its fragment box; restore its physical stop.
+      if (pendingFlowFocus) scrollTo({ top: s.start, behavior: 'instant' });
       const p = clamp((scrollY - s.start) / s.span), phase = evaluateNebulosa(p, s.layout);
       const closingProgress = s.start + s.span - scrollY <= 1 ? 1
         : clamp((p - s.layout.ranges.hold[1]) / (1 - s.layout.ranges.hold[1]));
@@ -171,8 +201,11 @@ export default function NebulosaChapter() {
       Object.assign(s, { pan, panWidth: innerWidth, panOffset: pan * innerWidth,
         flowCompensationY: releaseDistance, bridgeEnd });
       const api = window.amyReview;
+      const engineVisible = s.ready && phase.birth > 0 && p < 1;
+      const dissolve = s.reduced ? Number(closingProgress > 0) : ease(closingProgress / .17);
       let stats = api?.getStats();
       if (s.ready && api) {
+        api.setPresentationVisible?.(engineVisible && dissolve < 1);
         // Keep the accepted live scene formed while A takes over its closing pixels.
         const engineProgress = Math.min(p, s.layout.ranges.hold[1]);
         if (previousEngineProgress !== engineProgress) {
@@ -186,16 +219,18 @@ export default function NebulosaChapter() {
         }
         stats = api.getStats();
       }
-      const engineVisible = s.ready && phase.birth > 0 && p < 1;
       stage.dataset.engineVisible = String(engineVisible);
       stage.dataset.engineStatus = s.engineStatus;
-      const dissolve = s.reduced ? Number(closingProgress > 0) : ease(closingProgress / .17);
       stage.style.pointerEvents = engineVisible && dissolve < 1 && !s.reduced && !s.paused ? 'auto' : 'none';
       document.getElementById('webgl-canvas').style.opacity = String(1 - dissolve);
       const aboutOpacity = s.reduced ? Number(closingProgress > 0) : ease((closingProgress - .52) / .43);
       about.current.style.opacity = String(aboutOpacity);
       about.current.inert = (s.reduced ? closingProgress <= 0 : closingProgress < .94) || !s.active;
       about.current.setAttribute('aria-hidden', String(aboutOpacity <= .01 || !s.active));
+      if (pendingSetupFocus && !about.current.closest('[inert]')) {
+        about.current.focus({ preventScroll: true });
+        pendingSetupFocus = false;
+      }
       recomposition?.update(closingProgress, s.reduced);
       const anchors = stats?.story?.anchors;
       s.anchorSource = anchors ? 'engine' : 'unavailable';
@@ -235,6 +270,7 @@ export default function NebulosaChapter() {
       const href = event.target.closest?.('a[href]')?.getAttribute('href');
       const target = href?.startsWith('#') && document.getElementById(href.slice(1));
       if (target && flow?.contains(target)) { pendingFlowFocus = target; schedule(); }
+      if (href === '#gear') { pendingSetupFocus = true; schedule(); }
     }
     function goTo(progress) {
       scrollTo({ top: state.current.start + clamp(Number(progress) || 0) * state.current.span, behavior: 'instant' });
@@ -264,31 +300,48 @@ export default function NebulosaChapter() {
       } else poll = setTimeout(checkEngine, 150);
     }
     measure(); update();
+    // React mounts after native fragment resolution; target the physical final viewport.
+    const initialSetupFrame = location.hash === '#gear' ? requestAnimationFrame(() => {
+      pendingSetupFocus = true;
+      document.getElementById('gear')?.scrollIntoView({ block: 'start', behavior: 'instant' });
+      schedule();
+    }) : 0;
     window.nebulosaPreview = {
       goTo,
       getState: () => ({ ...state.current, ...evaluateNebulosa(state.current.progress, state.current.layout), phase: state.current.chapterPhase, socialHold: heldSocial()?.dataset.social || null, recomposition: recomposition?.stats() || null, engine: window.amyReview?.getStats() || null }),
     };
-    engineImport ||= import('./engine/main.js');
-    engineImport.then(async () => {
-      try {
-        const { createRecomposition } = await import('./engine/recomposition.js');
+    function startEngine() {
+      if (engineStarted || disposed) return;
+      engineStarted = true;
+      engineObserver.disconnect();
+      engineImport ||= import('./engine/main.js');
+      engineImport.then(async () => {
+        try {
+          const { createRecomposition } = await import('./engine/recomposition.js');
+          if (disposed) return;
+          recomposition = createRecomposition({ canvas: recompositionCanvas.current });
+          measureRecomposition();
+        } catch (cause) {
+          if (disposed) return;
+          console.error('No se ha podido iniciar la recomposición.', cause);
+          recomposition?.dispose(); recomposition = null;
+          recompositionError = 'No se ha podido iniciar la transición. Vuelve a cargar la página.';
+          setError(recompositionError);
+        }
+        checkEngine();
+      }).catch(cause => {
         if (disposed) return;
-        recomposition = createRecomposition({ canvas: recompositionCanvas.current });
-        measureRecomposition();
-      } catch (cause) {
-        if (disposed) return;
-        console.error('No se ha podido iniciar la recomposición.', cause);
-        recomposition?.dispose(); recomposition = null;
-        recompositionError = 'No se ha podido iniciar la transición. Vuelve a cargar la página.';
-        setError(recompositionError);
-      }
-      checkEngine();
-    }).catch(cause => {
-      if (disposed) return;
-      state.current.engineStatus = 'import-error';
-      console.error('No se ha podido importar el motor Nebulosa.', cause);
-      setError('No se ha podido iniciar la escena. Vuelve a cargar la página para intentarlo de nuevo.'); update();
-    });
+        state.current.engineStatus = 'import-error';
+        console.error('No se ha podido importar el motor Nebulosa.', cause);
+        setError('No se ha podido iniciar la escena. Vuelve a cargar la página para intentarlo de nuevo.'); update();
+      });
+    }
+    // Prewarm near the chapter instead of downloading/allocating the portrait at Hero entry.
+    const engineObserver = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) startEngine();
+    }, { rootMargin: `${Math.ceil(innerHeight * 2)}px 0px` });
+    engineObserver.observe(host);
+    if (window.amyReview || (import.meta.env.DEV && new URLSearchParams(location.search).has('p'))) startEngine();
     const observer = new ResizeObserver(measure);
     if (flow) observer.observe(flow);
     if (portal) observer.observe(portal);
@@ -303,6 +356,8 @@ export default function NebulosaChapter() {
     host.addEventListener('nebulosa-pause', pauseEvent);
     return () => {
       disposed = true; cancelAnimationFrame(frame); clearTimeout(poll); observer.disconnect();
+      engineObserver.disconnect();
+      cancelAnimationFrame(initialSetupFrame);
       recomposition?.dispose();
       removeEventListener('scroll', schedule); removeEventListener('resize', measure);
       removeEventListener('wheel', holdSocialWheel); removeEventListener('keydown', holdSocialKey);
@@ -322,14 +377,12 @@ export default function NebulosaChapter() {
 
   return <>
     <section ref={chapter} id="nebulosa-chapter" className="nebulosa-chapter" aria-label="Nebulosa">
+      <div id="gear" className="nebulosa-end-anchor" aria-hidden="true" />
       <div ref={viewport} className="nebulosa-viewport">
-        <div ref={screen} className="nebulosa-screen" inert aria-hidden="true">
-        <section ref={about} className="amy-about" aria-labelledby="amy-about-heading" inert aria-hidden="true">
-          <div className="amy-about-heading"><p className="amy-about-overline">04 · Su historia y su espacio</p><h2 id="amy-about-heading">SOBRE AMY</h2><p className="amy-about-subtitle">La persona detrás de las partidas.</p></div>
-          <div className="amy-about-panels">
-            <article className="amy-about-panel amy-about-story"><span className="amy-about-index">01 / CONÓCELA</span><h3>SU HISTORIA</h3><p>La historia, las ganas de jugar y todo lo que hay detrás de AMY.</p><div className="amy-about-line" /><p className="amy-about-tags">Personalidad · juego · inspiración</p></article>
-            <article className="amy-about-panel amy-about-setup"><span className="amy-about-index">02 / SU ESPACIO</span><h3>SU SETUP</h3><div className="amy-about-monitor" aria-hidden="true" /><div className="amy-about-desk" aria-hidden="true" /><div className="amy-about-keyboard" aria-hidden="true" /><div className="amy-about-gear"><span>Pantalla</span><span>Teclado</span><span>Ratón</span><span>Audio</span></div></article>
-          </div>
+        <div ref={screen} className="nebulosa-screen" inert aria-hidden="true"
+          onWheelCapture={releaseNarrativeFocus} onTouchStartCapture={releaseNarrativeFocus}>
+        <section ref={about} className="amy-about setup-construction" aria-labelledby="amy-about-heading" tabIndex={-1} inert aria-hidden="true">
+          <SetupConstruction />
         </section>
         <EngineDOM>
         {SOCIALS.map(social => {

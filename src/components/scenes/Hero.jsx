@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import lens from '@/data/heroLens.json';
-import { PROFILE } from '@/data/profile.js';
+import { PROFILE, SOCIAL_LINKS } from '@/data/profile.js';
 import AmySignature from '@/components/ui/AmySignature.jsx';
 import './Hero.css';
 
@@ -13,6 +13,7 @@ const transitionDistance = (runway, stage) => stage.offsetHeight *
 const SAGE_COPY = PROFILE.sageCopy;
 const BIO_COPY = PROFILE.bioCopy;
 const BIO_WORDS = BIO_COPY.split(' ');
+const CLIPS_URL = SOCIAL_LINKS.find((social) => social.id === 'tiktok').href;
 
 const smoothstep = (value) => {
   const t = clamp(value, 0, 1);
@@ -37,6 +38,7 @@ export default function Hero() {
 
   const visible = useRef(true);
   const redraw = useRef(() => {});
+  const initialHomeFragment = useRef(typeof window !== 'undefined' && window.location.hash === '#amy-home');
   const phaseRef = useRef('gameplay');
   const pausedRef = useRef(false);
   const zoomedRef = useRef(false);
@@ -336,10 +338,15 @@ export default function Hero() {
     window.addEventListener('hashchange', onHistoryNavigation);
     window.addEventListener('resize', measure);
     measure();
+    const homeFragmentFrame = initialHomeFragment.current ? requestAnimationFrame(() => {
+      initialHomeFragment.current = false;
+      if (location.hash === '#amy-home') document.getElementById('amy-home')?.scrollIntoView({ block: 'start', behavior: 'instant' });
+    }) : 0;
 
     return () => {
       redraw.current = () => {};
       cancelAnimationFrame(frame);
+      cancelAnimationFrame(homeFragmentFrame);
       resize.disconnect();
       window.removeEventListener('scroll', onScroll);
       document.removeEventListener('click', onAnchorClick, true);
@@ -854,9 +861,11 @@ export default function Hero() {
                   clips.current = node;
                   sageCard.current = node;
                 }}
-                href="#shorts"
+                href={CLIPS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="amy-sage-card"
-                aria-label="Sage, agente principal de AMY en Valorant — Ver clips"
+                aria-label="Sage · Main Ver clips en TikTok (abre en otra pestaña)"
                 onPointerMove={onSagePointerMove}
                 onPointerLeave={onSagePointerLeave}
               >
@@ -879,7 +888,7 @@ export default function Hero() {
                       <span className="amy-sage-tag">
                         <i aria-hidden="true" />
                         Sage · Main
-                      </span>
+                      </span>{' '}
                       <span className="amy-sage-cta">
                         Ver clips <span aria-hidden="true">↗</span>
                       </span>
@@ -916,7 +925,8 @@ export default function Hero() {
             >
               {isVideoPaused ? 'Reanudar vídeo' : 'Pausar vídeo'}
             </button>
-            <a href="#shorts" className="amy-intro-link">
+            <a href={CLIPS_URL} className="amy-intro-link" target="_blank" rel="noopener noreferrer"
+              aria-label="Ver clips de AMY en TikTok (abre en otra pestaña)">
               Ver clips <span aria-hidden="true">↗</span>
             </a>
           </div>
