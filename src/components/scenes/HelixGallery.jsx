@@ -40,12 +40,12 @@ export default function HelixGallery({ items, activeIndex = 0, onSelect, enabled
     const available = () => propsRef.current.enabled && !document.hidden;
 
     // B reference: inclined spiral, with independent height and actual Z depth.
-    function geometry(d) {
+    function geometry(d, spacing = largePortraits && width >= 520 ? 1.44 : 1) {
       const mobile = width < 520;
       const theta = d * Math.PI * 2 / count;
       const radius = mobile ? 151 : Math.min(width * 0.34, 306);
       return {
-        x: (Math.sin(theta) * radius - d * (mobile ? 13 : 20)) * fitScale,
+        x: (Math.sin(theta) * radius - d * (mobile ? 13 : 20)) * fitScale * spacing,
         y: (-d * (largePortraits ? (mobile ? 54 : 72) : (mobile ? 76 : 104)) - Math.sin(theta) * (mobile ? 12 : 21)) * fitScale,
         z: (Math.cos(theta) - 1) * (mobile ? 174 : 245) * fitScale,
         theta,
@@ -182,18 +182,20 @@ export default function HelixGallery({ items, activeIndex = 0, onSelect, enabled
     function resize() {
       width = stage.clientWidth;
       height = stage.clientHeight;
-      cardWidth = largePortraits ? (width < 520 ? 235 : 300) : (width < 520 ? 205 : Math.min(290, Math.max(225, width * 0.3)));
-      cardHeight = largePortraits ? (width < 520 ? 352 : 450) : (width < 520 ? 280 : 382);
+      cardWidth = largePortraits ? (width < 520 ? 280 : 400) : (width < 520 ? 205 : Math.min(290, Math.max(225, width * 0.3)));
+      cardHeight = largePortraits ? (width < 520 ? 420 : 600) : (width < 520 ? 280 : 382);
+      const orbitCardWidth = largePortraits ? (width < 520 ? 235 : 300) : cardWidth;
+      const orbitCardHeight = largePortraits ? (width < 520 ? 352 : 450) : cardHeight;
       fitScale = 1;
       let fit = 1;
-      // Fit the projected corners throughout the orbit, including their rotation.
-      // Solving s*position*P/(P-s*z) keeps both small and short columns contained.
+      // Keep fitting independent of the larger portraits and their visual spacing.
+      // Fit the reference corners with s*position*P/(P-s*z), including rotation.
       for (let d = -count / 2; d <= count / 2; d += 0.04) {
-        const g = geometry(d);
+        const g = geometry(d, 1);
         const ry = -Math.sin(g.theta) * 43 * Math.PI / 180;
         const rz = -d * 5 * Math.PI / 180;
-        for (const x of [-cardWidth / 2, cardWidth / 2]) {
-          for (const y of [-cardHeight / 2, cardHeight / 2]) {
+        for (const x of [-orbitCardWidth / 2, orbitCardWidth / 2]) {
+          for (const y of [-orbitCardHeight / 2, orbitCardHeight / 2]) {
             const rx = x * Math.cos(rz) - y * Math.sin(rz);
             const py = g.y + x * Math.sin(rz) + y * Math.cos(rz);
             const px = g.x + rx * Math.cos(ry);
