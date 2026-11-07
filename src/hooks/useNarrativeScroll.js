@@ -10,7 +10,8 @@ export function useNarrativeScroll() {
     let frame = 0, motion = null, lastWritten = scrollY, touch = null;
     let intent = 0, intentAt = 0, lastWheelAt = -Infinity, awaitWheelQuiet = false;
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-    function cancel() {
+    function cancel(event) {
+      if (event?.type === 'resize' && event.target !== window) return;
       cancelAnimationFrame(frame); frame = 0; motion = null;
       intent = 0; intentAt = 0; touch = null; awaitWheelQuiet = false;
       lastWritten = scrollY;

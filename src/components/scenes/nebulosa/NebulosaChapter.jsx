@@ -78,7 +78,9 @@ export default function NebulosaChapter() {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0, poll = 0, disposed = false, previousEngineProgress = null, previousPause = null;
     let pendingFlowFocus = null, pendingSetupFocus = false, initialProgressApplied = false;
+    let initialSetupFocusReady = false, initialSetupFocusCancelled = false;
     let recomposition, recompositionError = '', engineStarted = false, retryPending = false;
+    let measuredWidth = innerWidth, measuredHeight = innerHeight, lastScrollY = scrollY;
     const ease = value => { const t = clamp(value); return t * t * (3 - 2 * t); };
 
     function measureRecomposition() {
@@ -121,6 +123,12 @@ export default function NebulosaChapter() {
     function measure() {
       if (!flow || !portal) return;
       const keepEnd = state.current.closingProgress === 1;
+      const resized = measuredWidth !== innerWidth || measuredHeight !== innerHeight;
+      // Browser scroll anchoring can move scrollY before resize is delivered.
+      // Preserve the last painted chapter position against its previous geometry.
+      const keepProgress = resized && lastScrollY >= state.current.start - 1
+        && lastScrollY <= state.current.start + state.current.span + 1 ? state.current.progress : null;
+      measuredWidth = innerWidth; measuredHeight = innerHeight;
       const heroStyle = hero && getComputedStyle(hero);
       const dwell = Number(heroStyle?.getPropertyValue('--hero-dwell')) || HERO_DWELL_FALLBACK;
       const layout = createNebulosaLayout(dwell);
@@ -145,6 +153,7 @@ export default function NebulosaChapter() {
         heroDwell: dwell, heroDwellPixels: holdPixels,
         flowRelease: staticFlow ? start : flowBottom - portalHeight });
       if (keepEnd) scrollTo({ top: start + span, behavior: 'instant' });
+      else if (keepProgress !== null) scrollTo({ top: start + keepProgress * span, behavior: 'instant' });
       measureRecomposition();
       schedule();
     }
@@ -176,7 +185,9 @@ export default function NebulosaChapter() {
       const s = state.current;
       // The outgoing Flow transform moves its fragment box; restore its physical stop.
       if (pendingFlowFocus) scrollTo({ top: s.start, behavior: 'instant' });
+      if (pendingSetupFocus) scrollTo({ top: s.start + s.span, behavior: 'instant' });
       const p = clamp((scrollY - s.start) / s.span), phase = evaluateNebulosa(p, s.layout);
+      lastScrollY = scrollY;
       const closingProgress = s.start + s.span - scrollY <= 1 ? 1
         : clamp((p - s.layout.ranges.hold[1]) / (1 - s.layout.ranges.hold[1]));
       const chapterPhase = closingProgress >= 1 ? 'about' : closingProgress > 0 ? 'recompose' : phase.phase;
@@ -238,9 +249,14 @@ export default function NebulosaChapter() {
       about.current.style.opacity = String(aboutOpacity);
       about.current.inert = (s.reduced ? closingProgress <= 0 : closingProgress < .94) || !s.active;
       about.current.setAttribute('aria-hidden', String(aboutOpacity <= .01 || !s.active));
-      if (pendingSetupFocus && !about.current.closest('[inert]')) {
-        about.current.focus({ preventScroll: true });
+      if ((pendingSetupFocus || initialSetupFocusReady) && !about.current.closest('[inert]')) {
+        const focused = document.activeElement;
+        if (pendingSetupFocus || (!initialSetupFocusCancelled && location.hash === '#gear'
+          && closingProgress === 1 && (focused === document.body || focused === about.current))) {
+          about.current.focus({ preventScroll: true });
+        }
         pendingSetupFocus = false;
+        if (initialSetupFocusReady) cancelInitialSetupFocus();
       }
       recomposition?.update(closingProgress, s.reduced);
       const anchors = stats?.story?.anchors;
@@ -346,10 +362,26 @@ export default function NebulosaChapter() {
       }
     };
     measure(); update();
+    function cancelInitialSetupFocus() {
+      initialSetupFocusCancelled = true;
+      initialSetupFocusReady = false;
+      removeEventListener('load', requestInitialSetupFocus);
+      for (const name of ['keydown', 'pointerdown', 'wheel', 'touchstart']) removeEventListener(name, cancelInitialSetupFocus, true);
+    }
+    function requestInitialSetupFocus() {
+      if (disposed || initialSetupFocusCancelled || location.hash !== '#gear') return;
+      initialSetupFocusReady = true;
+      schedule();
+    }
+    if (location.hash === '#gear') {
+      for (const name of ['keydown', 'pointerdown', 'wheel', 'touchstart']) addEventListener(name, cancelInitialSetupFocus, { capture: true, passive: true });
+    }
     // React mounts after native fragment resolution; target the physical final viewport.
     const initialSetupFrame = location.hash === '#gear' ? requestAnimationFrame(() => {
-      pendingSetupFocus = true;
       document.getElementById('gear')?.scrollIntoView({ block: 'start', behavior: 'instant' });
+      // Firefox can clear pre-load focus while completing the navigation.
+      if (document.readyState === 'complete') requestInitialSetupFocus();
+      else addEventListener('load', requestInitialSetupFocus, { once: true });
       schedule();
     }) : 0;
     window.nebulosaPreview = {
@@ -406,6 +438,7 @@ export default function NebulosaChapter() {
       retryScene.current = null;
       engineObserver.disconnect();
       cancelAnimationFrame(initialSetupFrame);
+      cancelInitialSetupFocus();
       recomposition?.dispose();
       removeEventListener('scroll', schedule); removeEventListener('resize', measure);
       removeEventListener('wheel', holdSocialWheel); removeEventListener('keydown', holdSocialKey);

@@ -355,6 +355,93 @@ try {
     await endpoint(page);
   });
 
+  await scenario('resize-scenes', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }, async page => {
+    await page.goto(`${baseURL}#agents`);
+    await readyAgents(page);
+    await page.locator('.helix-arrow[aria-label="Agente siguiente"]').click();
+    const selected = await page.locator('[data-agent-card]').getAttribute('data-agent-id');
+    for (const [width, height] of [[844, 390], [390, 844], [390, 760]]) {
+      await page.setViewportSize({ width, height });
+      await readyAgents(page);
+      check(`Resize ${width}x${height} preserves interactive agents and selection`, await page.evaluate(id => {
+        const state = window.nebulosaPreview.getState();
+        return state.pan === 0 && !document.querySelector('.grow-portal-frame').closest('[inert]')
+          && document.querySelector('[data-agent-card]').dataset.agentId === id
+          && document.scrollingElement.scrollWidth <= innerWidth;
+      }, selected));
+    }
+    await menu(page, '#gear');
+    await endpoint(page);
+    await page.mouse.move(8, 350);
+    await page.mouse.wheel(0, -20);
+    await page.waitForFunction(() => window.nebulosaPreview.getState().phase === 'hold'
+      && document.querySelectorAll('a.nebulosa-social[data-link-active="true"]').length === 5);
+    for (const [width, height] of [[844, 390], [390, 844]]) {
+      await page.setViewportSize({ width, height });
+      await page.waitForFunction(() => window.nebulosaPreview.getState().phase === 'hold'
+        && document.querySelectorAll('a.nebulosa-social[data-link-active="true"]').length === 5);
+      await settle(page);
+      check(`Resize ${width}x${height} preserves AMY and its social links`, await page.evaluate(() =>
+        window.nebulosaPreview.getState().phase === 'hold'
+        && document.querySelectorAll('a.nebulosa-social[data-link-active="true"]').length === 5
+        && document.scrollingElement.scrollWidth <= innerWidth));
+    }
+  });
+
+  await scenario('controlled-video-resize', {}, async page => {
+    await page.goto(`${baseURL}#amy-home`);
+    await page.waitForFunction(() => document.querySelector('.amy-stage')?.dataset.phase === 'settled');
+    await settle(page);
+    const before = await page.evaluate(() => scrollY);
+    await page.mouse.move(8, 450);
+    await page.mouse.wheel(0, 20);
+    await page.waitForFunction(y => scrollY > y + 40, before);
+    // Fault injection isolates media resize; the visitor's scroll remains native.
+    const injectedInFlight = await page.locator('video').evaluate(video => {
+      const state = window.nebulosaPreview.getState();
+      const target = state.start + state.layout.distances.flowHold[1] * innerHeight - 2;
+      const moving = scrollY < target - 40;
+      video.dispatchEvent(new Event('resize', { bubbles: false }));
+      return moving;
+    });
+    check('Controlled media resize occurs before the native move completes', injectedInFlight);
+    await readyAgents(page);
+    check('Controlled media resize does not interrupt native scene arrival', await page.evaluate(() => {
+      const state = window.nebulosaPreview.getState();
+      const expected = state.start + state.layout.distances.flowHold[1] * innerHeight - 2;
+      return Math.abs(scrollY - expected) <= 1 && state.pan === 0;
+    }));
+  });
+
+  await scenario('cold-focus-user-intent', {}, async (page, context) => {
+    let release, heldRequest = false;
+    const imageGate = new Promise(resolve => { release = resolve; });
+    await context.route('**/assets/images/amy/amy-cutout.webp', async route => {
+      heldRequest = true;
+      await imageGate;
+      await route.continue();
+    });
+    // React may mount after load in Chromium/WebKit. A static fixture image
+    // guarantees the same pre-load window without changing application code.
+    await context.route(baseURL.href, async route => {
+      const response = await route.fetch();
+      const html = await response.text();
+      await route.fulfill({ response, body: html.replace('<body>', '<body><img hidden src="assets/images/amy/amy-cutout.webp" alt="">') });
+    });
+    try {
+      await page.goto(`${baseURL}#gear`, { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction(() => window.nebulosaPreview?.getState().closingProgress === 1);
+      check('Focus fixture holds document load after React mounts', heldRequest
+        && await page.evaluate(() => document.readyState !== 'complete'));
+      await page.keyboard.press('Tab');
+      release();
+      await page.waitForLoadState('load');
+      await settle(page);
+      check('Cold entry respects keyboard intent before document load', await page.evaluate(() =>
+        !document.activeElement.matches('.setup-construction') && !document.activeElement.closest('[inert]')));
+    } finally { release(); }
+  });
+
   await scenario('cache-policy', {}, async (page, context) => {
     await context.addInitScript(() => {
       window.__amyFetchPolicy = [];
