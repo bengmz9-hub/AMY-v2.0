@@ -48,9 +48,9 @@ export function useScreenSteps(enabled = false) {
         { label: 'Hero', start: heroStart, end: heroStart + stage.offsetHeight * dwell },
         phase('Hélice', layout.distances.flowHold),
         { ...phase('AMY', layout.distances.hold), beats: [
-          { y: start + layout.distances.birth[1] * height, time: 1000 },
-          { y: start + layout.distances.field[1] * height, time: 2100 },
-          { y: start + layout.distances.amy[1] * height, time: 4000 },
+          { y: start + layout.distances.birth[1] * height, time: 850 },
+          { y: start + layout.distances.field[1] * height, time: 1200 },
+          { y: start + layout.distances.amy[1] * height, time: 4050 },
         ] },
         { label: 'Setup', start: maximum, end: maximum },
       ].map(zone => ({ ...zone, target: clamp((zone.start + zone.end) / 2, 0, maximum) }));

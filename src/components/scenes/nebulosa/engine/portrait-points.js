@@ -55,9 +55,12 @@ void main() {
     if (uStoryReduced > .5) {
       visibility *= uStoryGather * (1.0 - uStoryRelease);
     } else {
-      float entryStagger = seed * .22;
+      // A spatial wave reveals the facial core before its orbiting periphery.
+      // Stable seeds soften the front without changing grain correspondence.
+      float revealRadius = clamp((faceRadius - .12) / 1.75, 0.0, 1.0);
+      float entryStagger = mix(revealRadius * .36, .38, hairPeriphery) + seed * .06;
       float exitStagger = fract(seed * 7.13 + .17) * .18;
-      float gather = smoothstep(entryStagger, .78 + entryStagger, uStoryGather);
+      float gather = smoothstep(entryStagger, mix(.42, .56, 1.0 - protectedFace) + entryStagger, uStoryGather);
       introFormed = gather;
       float disperse = smoothstep(exitStagger, .82 + exitStagger, uStoryRelease);
       formed = gather * (1.0 - disperse);
@@ -98,12 +101,17 @@ void main() {
     // Differential rotation and depth peak only while the portrait is forming.
     if (introFormed > 0.0 && introFormed < 1.0) {
       float crest = sin(introFormed * 3.14159265);
-      float angle = crest * 2.35 * (.35 + seed * .65);
+      // Let the face become legible while the outer grains keep their orbit.
+      float orbit = 1.0 - protectedFace * smoothstep(.12, .58, uStoryGather) * .95;
+      float angle = crest * 2.35 * (.35 + seed * .65) * orbit;
       world.xy = mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * world.xy;
-      world.xy *= 1.0 - crest * .16;
-      world.z += sin(seed * 6.2831853 + introFormed * 4.0) * crest * .80;
+      world.xy *= 1.0 - crest * .16 * orbit;
+      world.z += sin(seed * 6.2831853 + introFormed * 4.0) * crest * .80 * orbit;
     }
     vBridgeColor = source.color;
+    // A restrained travelling light crest marks assembly away from the face.
+    float lightCrest = pow(sin(introFormed * 3.14159265), 4.0);
+    vBridgeColor *= 1.0 + lightCrest * .30 * (1.0 - protectedFace * .80);
     vBridgeAlpha = source.alpha;
     vBridgeMix = 1.0 - introFormed;
     vBridgeHandoff = uAbHandoff;

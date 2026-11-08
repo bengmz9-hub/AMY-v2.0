@@ -56,8 +56,9 @@ try{
         const solar=samples.findIndex(s=>s.birth>.95&&s.amy<.05),morph=samples.findIndex(s=>s.amy>.05&&s.amy<.95);
         check('One gesture includes Solar then its transformation into AMY',solar>=0&&morph>solar,{solar,morph,samples});
         const span=phase=>{const frames=samples.filter(s=>s.phase===phase);return frames.at(-1)?.at-frames[0]?.at;};
-        check('Solar remains readable for at least900ms during the same step',span('field')>=900,{milliseconds:span('field')});
-        check('Portrait formation takes at least1700ms during the same step',span('amy')>=1700,{milliseconds:span('amy')});
+        check('Solar is a brief200 to600ms introduction',span('field')>=200&&span('field')<=600,{milliseconds:span('field')});
+        check('Portrait formation takes at least2600ms during the same step',span('amy')>=2600,{milliseconds:span('amy')});
+        check('AMY formation receives at least five times the Solar screen time',span('amy')>=span('field')*5,{solar:span('field'),amy:span('amy')});
       }
       if(['AMY','Setup'].includes(label))await page.screenshot({path:output+'/'+label+'.png'});
     }
