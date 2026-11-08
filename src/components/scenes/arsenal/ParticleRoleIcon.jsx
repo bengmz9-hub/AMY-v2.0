@@ -24,13 +24,15 @@ function roleSymbol(role) {
   return box.length === 4 && box.every(Number.isFinite) && box[2] > 0 && box[3] > 0 ? symbol : null;
 }
 
-export default function ParticleRoleIcon({ role, agentId, variant = 'a', enabled = true }) {
+export default function ParticleRoleIcon({ role, agentId, variant = 'a', enabled = true, prepareStartup = false, onPrepared }) {
   const symbol = roleSymbol(role);
   const hostRef = useRef(null);
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const enabledRef = useRef(enabled);
   const latest = useRef({ role, variant });
+  const preparation = useRef({ requested: prepareStartup, callback: onPrepared });
+  preparation.current = { requested: prepareStartup, callback: onPrepared };
 
   useEffect(() => {
     latest.current = { role, variant };
@@ -41,14 +43,15 @@ export default function ParticleRoleIcon({ role, agentId, variant = 'a', enabled
     enabledRef.current = enabled;
     engineRef.current?.setEnabled(enabled);
   }, [enabled]);
+  useEffect(() => { if (prepareStartup) engineRef.current?.prepare(); }, [prepareStartup]);
 
   useEffect(() => {
     const host = hostRef.current;
     const canvas = canvasRef.current;
     host.dataset.iconReady = 'false';
     let context;
-    try { context = canvas.getContext('2d', { alpha: true }); } catch { return undefined; }
-    if (!context) return undefined;
+    try { context = canvas.getContext('2d', { alpha: true }); } catch { preparation.current.callback?.('fallback'); return undefined; }
+    if (!context) { preparation.current.callback?.('fallback'); return undefined; }
 
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     let reduced = media.matches;
@@ -69,6 +72,7 @@ export default function ParticleRoleIcon({ role, agentId, variant = 'a', enabled
     let glowCanvas;
     let glowContext;
     let edgeMask;
+    const samples = new Map();
     let glowFilter = 'blur(5px)';
     const pointer = { x: 0, y: 0, active: false, strength: 0 };
 
@@ -83,6 +87,7 @@ export default function ParticleRoleIcon({ role, agentId, variant = 'a', enabled
       stop();
       host.dataset.iconReady = 'false';
       canvas.style.visibility = 'hidden';
+      preparation.current.callback?.('fallback');
     }
 
     function makeSprite() {
@@ -127,9 +132,10 @@ export default function ParticleRoleIcon({ role, agentId, variant = 'a', enabled
       glowFilter = width < 280 ? 'blur(3px)' : 'blur(5px)';
     }
 
-    function targets() {
-      const shape = roleSymbol(currentRole);
-      if (!shape) return false;
+    function sampleRole(name) {
+      if (samples.has(name)) return samples.get(name);
+      const shape = roleSymbol(name);
+      if (!shape) return null;
       const mask = document.createElement('canvas');
       mask.width = Math.ceil(width);
       mask.height = Math.ceil(height);
@@ -149,6 +155,16 @@ export default function ParticleRoleIcon({ role, agentId, variant = 'a', enabled
         }
       }
       if (!points.length) throw new Error('No pixels in the supplied role symbol');
+      const result = { points, pixels, mask: { width: mask.width } };
+      samples.set(name, result);
+      host.dataset.roleCacheSize = String(samples.size);
+      return result;
+    }
+
+    function targets() {
+      const sampled = sampleRole(currentRole);
+      if (!sampled) return false;
+      const { points, pixels, mask } = sampled;
       for (let index = 0; index < pool.length; index += 1) {
         const grain = pool[index];
         const sample = Math.min(points.length - 1, Math.floor((index + seed(index, 4)) * points.length / pool.length));
@@ -295,11 +311,20 @@ export default function ParticleRoleIcon({ role, agentId, variant = 'a', enabled
       frame = requestAnimationFrame(tick);
     }
 
-    function paint() {
-      if (!ready || disposed || failed || !inView || document.hidden || !roleSymbol(currentRole)) return;
+    function paint(preparing = false) {
+      if (!ready || disposed || failed || (!inView && !preparing) || document.hidden || !roleSymbol(currentRole)) return;
       try { draw(); } catch { fail(); return; }
       host.dataset.iconReady = 'true';
-      if (!reduced && enabledRef.current && !frame) frame = requestAnimationFrame(tick);
+      if (!preparing && !reduced && enabledRef.current && !frame) frame = requestAnimationFrame(tick);
+    }
+
+    function prepare() {
+      if (!ready || disposed || failed || document.hidden || !width || !height) return;
+      try {
+        for (const name of Object.keys(ROLE_SYMBOLS)) sampleRole(name);
+        paint(true);
+        if (!failed) preparation.current.callback?.('ready');
+      } catch { fail(); }
     }
 
     function update(nextRole) {
@@ -330,6 +355,7 @@ export default function ParticleRoleIcon({ role, agentId, variant = 'a', enabled
       if (width === bounds.width && height === bounds.height && ratio === dpr) return;
       width = bounds.width;
       height = bounds.height;
+      samples.clear();
       dpr = ratio;
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
@@ -345,7 +371,7 @@ export default function ParticleRoleIcon({ role, agentId, variant = 'a', enabled
           drawSize: 4, sSize: 4, alpha: .9, sAlpha: .9,
         }));
       }
-      try { resizeLightBuffers(); if (targets()) { settle(); paint(); } } catch { fail(); }
+      try { resizeLightBuffers(); if (targets()) { settle(); paint(); } if (preparation.current.requested) prepare(); } catch { fail(); }
     }
 
     function pointerMove(event) {
@@ -356,7 +382,7 @@ export default function ParticleRoleIcon({ role, agentId, variant = 'a', enabled
       pointer.active = pointer.x >= 0 && pointer.x <= width && pointer.y >= 0 && pointer.y <= height;
     }
     function pointerLeave() { pointer.active = false; }
-    function visibility() { pointerLeave(); if (document.hidden) stop(); else paint(); }
+    function visibility() { pointerLeave(); if (document.hidden) stop(); else { paint(); if (preparation.current.requested) prepare(); } }
     function preference() {
       reduced = media.matches;
       pointerLeave();
@@ -378,7 +404,7 @@ export default function ParticleRoleIcon({ role, agentId, variant = 'a', enabled
     document.addEventListener('visibilitychange', visibility);
     window.addEventListener('resize', resize, { passive: true });
     media.addEventListener('change', preference);
-    engineRef.current = { update, setEnabled(value) {
+    engineRef.current = { update, prepare, setEnabled(value) {
       enabledRef.current = value;
       stop();
       if (value) paint(); else pointerLeave();

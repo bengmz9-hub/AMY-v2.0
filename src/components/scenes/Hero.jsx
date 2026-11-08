@@ -20,7 +20,7 @@ const smoothstep = (value) => {
   return t * t * (3 - 2 * t);
 };
 
-export default function Hero() {
+export default function Hero({ startupCoverActive = false, onStartupProgress }) {
   const id = `amy-${useId().replace(/[^a-z0-9-]/gi, '')}`;
   const runway = useRef(null);
   const stage = useRef(null);
@@ -35,6 +35,17 @@ export default function Hero() {
   const introOverlay = useRef(null);
   const clips = useRef(null);
   const sageCard = useRef(null);
+  const portraitImage = useRef(null);
+  const plateImage = useRef(null);
+  const prepareFullVideo = useRef(startupCoverActive);
+  const startupCallback = useRef(onStartupProgress);
+  startupCallback.current = onStartupProgress;
+  const startupTasks = useRef({ portrait: 'pending', plate: 'pending', video: 'pending', layout: 'pending', heroAssets: 'pending' });
+  const reportStartup = useCallback((task, state) => {
+    if (startupTasks.current[task] === state) return;
+    startupTasks.current = { ...startupTasks.current, [task]: state };
+    startupCallback.current?.(startupTasks.current);
+  }, []);
 
   const visible = useRef(true);
   const redraw = useRef(() => {});
@@ -65,13 +76,140 @@ export default function Hero() {
   // Use .webm versions by default as requested; fallback to .mp4 only if .webm fails
   const [gameplayCodec, setGameplayCodec] = useState('av1');
   const [gameplayFailed, setGameplayFailed] = useState(false);
+  const [downloadedVideo, setDownloadedVideo] = useState(null);
 
   const gameplaySrc =
     gameplayCodec === 'av1'
       ? asset('videos/valorant-gameplay-720p-av1.webm')
       : asset('videos/valorant-gameplay-720p-h264.mp4');
+  // A complete Blob, rather than preload="auto", guarantees the selected file
+  // is downloaded. Keep it for replay/loop after the cover has disappeared.
+  const videoSrc = prepareFullVideo.current
+    ? (downloadedVideo?.url === gameplaySrc ? downloadedVideo.src : undefined)
+    : gameplaySrc;
   const staticScene = reduced || portraitError;
   const videoAllowed = (!reduced || manualVideoRequested) && !portraitError;
+
+  const onGameplayError = useCallback(() => {
+    if (gameplayCodec === 'av1') {
+      gameplayResumeTime.current = gameplayVideo.current?.currentTime || 0;
+      setGameplayCodec('h264');
+      return;
+    }
+    setGameplayFailed(true);
+    setStatus('error');
+    redraw.current();
+  }, [gameplayCodec]);
+
+  useEffect(() => {
+    if (!prepareFullVideo.current) return;
+    const controller = new AbortController();
+    let objectURL;
+    fetch(gameplaySrc, { signal: controller.signal }).then(async response => {
+      if (!response.ok || response.status === 206) throw new Error('Incomplete gameplay response.');
+      const blob = await response.blob();
+      if (!blob.size) throw new Error('Empty gameplay response.');
+      if (controller.signal.aborted) return;
+      objectURL = URL.createObjectURL(blob);
+      setDownloadedVideo({ url: gameplaySrc, src: objectURL });
+    }).catch(() => { if (!controller.signal.aborted) onGameplayError(); });
+    return () => {
+      controller.abort();
+      if (objectURL) URL.revokeObjectURL(objectURL);
+    };
+  }, [gameplaySrc, onGameplayError]);
+
+  useEffect(() => {
+    if (!startupCoverActive) return;
+    let active = true;
+    const cleanups = [];
+    // Images inside the Hero plus its CSS masks, texture and video poster.
+    // Portrait and plate already have their own decode/fallback gates.
+    const images = [...runway.current.querySelectorAll('img')].filter(image =>
+      image !== portraitImage.current && image !== plateImage.current);
+    for (const name of ['amy.svg', 'juarez.svg', 'amy-hero-texture.svg', 'amy-signature-alpha.png', 'amy-hero-gameplay-flat-crt-poster.jpg']) {
+      const image = new Image();
+      image.src = asset(`images/amy/${name}`);
+      images.push(image);
+    }
+    Promise.all(images.map(image => new Promise(resolve => {
+      const cleanup = () => { image.removeEventListener('load', loaded); image.removeEventListener('error', failed); };
+      const failed = () => { cleanup(); if (active && image.isConnected) image.style.visibility = 'hidden'; resolve(false); };
+      const loaded = async () => {
+        cleanup();
+        if (!image.naturalWidth) { failed(); return; }
+        try { await image.decode(); resolve(true); } catch { failed(); }
+      };
+      cleanups.push(cleanup);
+      image.addEventListener('load', loaded);
+      image.addEventListener('error', failed);
+      if (image.complete) loaded();
+    }))).then(results => { if (active) reportStartup('heroAssets', results.every(Boolean) ? 'ready' : 'fallback'); });
+    return () => { active = false; cleanups.forEach(cleanup => cleanup()); };
+  }, [startupCoverActive, reportStartup]);
+
+  useEffect(() => {
+    const image = portraitImage.current;
+    if (portraitError) { reportStartup('portrait', 'fallback'); return; }
+    let active = true;
+    const expected = image.src;
+    reportStartup('portrait', 'pending');
+    const failed = () => {
+      if (!active || image.src !== expected) return;
+      if (portraitFormat === 'webp') setPortraitFormat('png');
+      else setPortraitError(true);
+    };
+    const loaded = async () => {
+      if (!image.naturalWidth) { failed(); return; }
+      try {
+        await image.decode();
+        if (active && image.src === expected) reportStartup('portrait', 'ready');
+      } catch { failed(); }
+    };
+    image.addEventListener('load', loaded);
+    image.addEventListener('error', failed);
+    if (image.complete) loaded();
+    return () => { active = false; image.removeEventListener('load', loaded); image.removeEventListener('error', failed); };
+  }, [portraitFormat, portraitError, reportStartup]);
+
+  useEffect(() => {
+    const image = plateImage.current;
+    let active = true;
+    const failed = () => {
+      if (active) { image.style.visibility = 'hidden'; reportStartup('plate', 'fallback'); }
+    };
+    const loaded = async () => {
+      if (!image.naturalWidth) { failed(); return; }
+      try { await image.decode(); if (active) reportStartup('plate', 'ready'); }
+      catch { failed(); }
+    };
+    image.addEventListener('load', loaded);
+    image.addEventListener('error', failed);
+    if (image.complete) loaded();
+    return () => { active = false; image.removeEventListener('load', loaded); image.removeEventListener('error', failed); };
+  }, [reportStartup]);
+
+  useEffect(() => {
+    if ((!prepareFullVideo.current && staticScene) || gameplayFailed) {
+      reportStartup('video', gameplayFailed ? 'fallback' : 'ready');
+      return;
+    }
+    const video = gameplayVideo.current;
+    const expected = videoSrc && new URL(videoSrc, document.baseURI).href;
+    reportStartup('video', 'pending');
+    const loaded = () => {
+      if (expected && video.readyState >= 2 && video.currentSrc === expected) reportStartup('video', 'ready');
+    };
+    video.addEventListener('loadeddata', loaded);
+    loaded();
+    return () => video.removeEventListener('loadeddata', loaded);
+  }, [staticScene, gameplayFailed, videoSrc, reportStartup]);
+
+  useEffect(() => {
+    const visibleDraw = () => { if (!document.hidden) redraw.current(); };
+    document.addEventListener('visibilitychange', visibleDraw);
+    return () => document.removeEventListener('visibilitychange', visibleDraw);
+  }, []);
 
   const updatePhaseState = useCallback((nextPhase) => {
     if (phaseRef.current !== nextPhase) {
@@ -220,8 +358,8 @@ export default function Hero() {
       }
 
       const cs = getComputedStyle(runway.current);
-      const dwell = m.height * (Number(cs.getPropertyValue('--hero-dwell')) || .65);
-      const wipeSpan = Math.max(1, m.height * (Number(cs.getPropertyValue('--hero-wipe-span')) || 1.85));
+      const dwell = m.height * (Number(cs.getPropertyValue('--hero-dwell')) || .15);
+      const wipeSpan = Math.max(1, m.height * (Number(cs.getPropertyValue('--hero-wipe-span')) || 1.11));
       const dwellEnd = travel + dwell;
       // La transición diagonal solo existe desde el Hero background asentado (progress >= 1), nunca sobre el vídeo de intro.
       const targetWipe = staticScene || progress < 1 ? 0 : clamp((scroll - dwellEnd) / wipeSpan, 0, 1);
@@ -245,6 +383,12 @@ export default function Hero() {
       }
       const wipe = smoothedWipe;
       const wipeStr = wipe.toFixed(4);
+
+      // The wipe disables pointer interaction in CSS. Match that boundary for
+      // keyboard navigation so covered Hero controls cannot take focus.
+      const covered = wipeStr !== '0.0000';
+      if (covered && stage.current.contains(document.activeElement)) document.activeElement.blur();
+      stage.current.inert = covered;
 
       stage.current.style.clipPath = 'none';
       stage.current.style.setProperty('--lens-settle', lensSettle.toFixed(4));
@@ -284,6 +428,7 @@ export default function Hero() {
           lensTrigger.current.blur();
         }
       }
+      if (!document.hidden) reportStartup('layout', 'ready');
     };
 
     const schedule = () => {
@@ -354,14 +499,7 @@ export default function Hero() {
       window.removeEventListener('hashchange', onHistoryNavigation);
       window.removeEventListener('resize', measure);
     };
-  }, [staticScene, videoAllowed, id, gameplayFailed, updatePhaseState, cancelGlassesForNavigation]);
-
-  // Reload media elements only when falling back from AV1 WebM to H.264 MP4
-  useEffect(() => {
-    if (gameplayCodec === 'h264' && gameplayVideo.current) {
-      gameplayVideo.current.load();
-    }
-  }, [gameplayCodec]);
+  }, [staticScene, videoAllowed, id, gameplayFailed, updatePhaseState, cancelGlassesForNavigation, reportStartup]);
 
   // One video clock runs through the intro, settled glasses and fullscreen re-entry.
   // The AMY portrait stays still; only the lens reflection plays while visible.
@@ -373,7 +511,7 @@ export default function Hero() {
       if (!gv) return;
       gv.muted = true;
       gv.defaultMuted = true;
-      const shouldPlay = () => videoAllowed && !pausedRef.current &&
+      const shouldPlay = () => !startupCoverActive && videoAllowed && !pausedRef.current &&
         !document.hidden && visible.current && !gameplayFailed;
       if (shouldPlay()) {
         gv.play().then(() => {
@@ -416,23 +554,12 @@ export default function Hero() {
     manualVideoRequested,
     paused,
     videoAllowed,
-    gameplaySrc,
+    videoSrc,
     gameplayFailed,
     phase,
     staticScene,
+    startupCoverActive,
   ]);
-
-  // Codec fallback handlers (AV1 WebM -> H.264 MP4 once -> error, preventing fallback loops)
-  const onGameplayError = () => {
-    if (gameplayCodec === 'av1') {
-      gameplayResumeTime.current = gameplayVideo.current?.currentTime || 0;
-      setGameplayCodec('h264');
-      return;
-    }
-    setGameplayFailed(true);
-    setStatus('error');
-    redraw.current();
-  };
 
   // Interactive glasses re-entry (zoom to fullscreen Valorant view and back)
   const animateDive = useCallback((targetDive, durationMs, onDone) => {
@@ -657,6 +784,7 @@ export default function Hero() {
           }}
         >
           <img
+            ref={plateImage}
             className="bg-layers__plate"
             src={asset('images/amy/jjettas-pebble-light-plate.webp')}
             alt=""
@@ -693,6 +821,7 @@ export default function Hero() {
           <div className="amy-portrait-wrap">
             <div ref={plane} className="amy-portrait-plane">
               <img
+                ref={portraitImage}
                 className="amy-portrait"
                 src={asset(`images/amy/amy-cutout.${portraitFormat}`)}
                 width="1915"
@@ -711,7 +840,7 @@ export default function Hero() {
             <video
               ref={gameplayVideo}
               className="amy-lens-video"
-              src={gameplaySrc}
+              src={videoSrc}
               poster={asset('images/amy/amy-hero-gameplay-flat-crt-poster.jpg')}
               muted
               loop

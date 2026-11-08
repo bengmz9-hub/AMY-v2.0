@@ -16,6 +16,24 @@ La aplicación recorre cuatro escenas conectadas por scroll nativo:
 
 Incluye soporte para `prefers-reduced-motion: reduce`, navegación por teclado y respaldo estático de enlaces principales tanto sin JavaScript (`<noscript>`) como cuando WebGL o los recursos 3D no están disponibles.
 
+## Carga y navegación
+
+La entrada prepara los recursos de las escenas, incluido el vídeo seleccionado completo, y mantiene el indicador de carga al menos dos segundos visibles. Si los recursos tardan más, la entrada espera hasta que estén listos. El tiempo de una pestaña oculta no consume ese mínimo; los enlaces directos y la restauración del historial conservan su entrada propia.
+
+El modo habitual utiliza scroll continuo con ayuda breve para impulsos de rueda separados. También está disponible la variante [un gesto por pantalla](https://bengmz9-hub.github.io/AMY-v2.0/?scroll=steps): gameplay de entrada, Hero, Hélice, nebulosa solar, AMY con redes y Setup. Permite invertir el sentido y encadenar un gesto nuevo durante la transición; agrupa la cola de una misma ráfaga para conservar su destino. En dispositivos táctiles y con movimiento reducido se mantiene el desplazamiento nativo.
+
+Pruebas dirigidas adicionales, ejecutadas contra una compilación ya servida:
+
+```sh
+node tests/startup-loading.mjs
+node tests/continuous-scroll.mjs
+node tests/wheel-pulse.mjs
+node tests/screen-steps.mjs
+node tests/navbar-scene.mjs
+```
+
+Los tres primeros aceptan respectivamente `AMY_STARTUP_URL` y `AMY_TEST_BASE_URL`; los dos últimos aceptan `AMY_STEPS_URL` y `AMY_NAVBAR_URL`. Sus variables de salida son `AMY_STARTUP_OUTPUT`, `AMY_TEST_OUTPUT`, `AMY_STEPS_OUTPUT` y `AMY_NAVBAR_OUTPUT`. La URL debe apuntar a la base servida y terminar en `/`; los tests de pantallas añaden su query internamente. Las pruebas de gestos usan Chrome automatizado y no sustituyen la valoración con un ratón o teléfono físico.
+
 ## Requisitos
 
 - **Node.js 22 o superior** (Node 22 se utiliza en integración continua).

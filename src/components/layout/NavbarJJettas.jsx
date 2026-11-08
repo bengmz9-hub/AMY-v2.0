@@ -15,7 +15,7 @@ const LINK_ROWS = [
 
 const SOCIALS = SOCIAL_LINKS;
 
-export default function NavbarJJettas() {
+export default function NavbarJJettas({ startupCoverActive = false }) {
   const [open, setOpen] = useState(false);
   const [isComp, setIsComp] = useState(false);
   const [lightScene, setLightScene] = useState(false);
@@ -34,8 +34,9 @@ export default function NavbarJJettas() {
     const hero = document.getElementById('amy');
     const stage = hero?.querySelector('.amy-stage');
     const update = () => {
-      cancelAnimationFrame(frame);
+      if (frame) return;
       frame = requestAnimationFrame(() => {
+        frame = 0;
         setLightScene(Boolean(hero && stage && hero.getBoundingClientRect().bottom > 82 &&
           stage.dataset.phase === 'settled' && stage.dataset.zoomed !== 'true' &&
           hero.dataset.portraitError !== 'true' && Number(stage.dataset.wipe || 0) < 0.55));
@@ -133,7 +134,7 @@ export default function NavbarJJettas() {
   };
 
   return (
-    <div ref={root} className={`jj-navbar${open ? ' menu-is-open' : ''}${lightScene ? ' jj-navbar--light-scene' : ''}`}
+    <div ref={root} inert={startupCoverActive} className={`jj-navbar${open ? ' menu-is-open' : ''}${lightScene ? ' jj-navbar--light-scene' : ''}`}
       role={open ? 'dialog' : undefined} aria-modal={open ? true : undefined}
       aria-label={open ? 'Menú principal' : undefined}
       onWheel={open ? (event) => event.stopPropagation() : undefined}

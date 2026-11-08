@@ -8,6 +8,7 @@ import { createPortraitRepulsion } from './portrait-repulsion.js';
 import { addPortraitGrainUV, attachPortraitSoftness } from './portrait-softness.js';
 import { portraitScaleForWidth } from './social-layout.js';
 import { createPortraitPoints } from './portrait-points.js';
+import { waitForGpu } from './wait-for-gpu.js';
 
 const ASSETS = {
   metaUrl: new URL('./assets/depth.json?no-inline', import.meta.url).href,
@@ -455,6 +456,8 @@ function setStatusUI(status, title, message, showRetry = false) {
 }
 
 let loadedAssets = null;
+let initialAssetsPromise = null, startupPreparation = null;
+let startupPrepared = false, startupWarmObjects = 0;
 let renderer = null;
 let postProcessor = null;
 let scene = null;
@@ -1826,9 +1829,45 @@ function bindInteraction() {
 }
 
 window.amyReview = {
+  prepareStartup() {
+    if (startupPrepared) return Promise.resolve(this.getStats());
+    if (!startupPreparation) startupPreparation = (async () => {
+      if (!await initialAssetsPromise || state.status !== 'ready') throw new Error('Particle assets unavailable.');
+      renderer.compile(scene, camera);
+      // Compile also visits invisible objects. A real draw is still required to
+      // upload their buffers. Do not advance any simulation or narrative phase.
+      const saved = new Map();
+      scene.traverse(object => {
+        if (!object.isPoints && !object.isLine && !object.name.startsWith('platform-')) return;
+        startupWarmObjects++;
+        for (let node = object; node && node !== scene; node = node.parent) {
+          if (!saved.has(node)) saved.set(node, [node.visible, node.frustumCulled]);
+          node.visible = true;
+          node.frustumCulled = false;
+        }
+      });
+      try {
+        postProcessor.render(scene, camera, { ...postFrameOptions, time: state.time, mode: state.mode });
+      } finally {
+        for (const [object, values] of saved) [object.visible, object.frustumCulled] = values;
+        if (state.presentationVisible) postProcessor.render(scene, camera, postFrameOptions);
+        else { renderer.setRenderTarget(null); renderer.clear(); state.renderCalls = 0; }
+      }
+      await waitForGpu(renderer);
+      startupPrepared = true;
+      return this.getStats();
+    })().catch(error => {
+      startupPreparation = null;
+      state.error = String(error.message || error);
+      setStatusUI('error', 'No se pudo preparar la escena', 'Puedes continuar y reintentar la carga.', true);
+      throw error;
+    });
+    return startupPreparation;
+  },
   getStats() {
     return {
       status: state.status,
+      startup: { prepared: startupPrepared, warmedObjects: startupWarmObjects },
       error: state.error,
       mode: state.mode,
       frozen: state.frozen,
@@ -2032,7 +2071,8 @@ window.amyReview = {
 
 if (initThree()) {
   bindInteraction();
-  loadAndBuildAssets().then(() => {
+  initialAssetsPromise = loadAndBuildAssets().then(result => {
     syncAnimationLoop();
+    return result;
   });
 }

@@ -8,7 +8,7 @@ const smoothstep = (v) => {
   return t * t * (3 - 2 * t);
 };
 
-export default function AgentCarousel() {
+export default function AgentCarousel({ prepareStartup = false, startupCoverActive = false, onStartupProgress }) {
   const sectionRef = useRef(null);
   const stageRef = useRef(null);
   const slashAuraRef = useRef(null);
@@ -76,7 +76,7 @@ export default function AgentCarousel() {
         applyWipeState(clamp(Number(heroEl.dataset.wipe) || 0));
       } else {
         const rect = sectionEl.getBoundingClientRect();
-        const span = Number(getComputedStyle(sectionEl).getPropertyValue('--gc-wipe-span')) || 1.85;
+        const span = Number(getComputedStyle(sectionEl).getPropertyValue('--gc-wipe-span')) || 1.11;
         applyWipeState(clamp(-rect.top / Math.max(1, innerHeight * span)));
       }
     };
@@ -167,7 +167,7 @@ export default function AgentCarousel() {
 
       <div ref={stageRef} className="grow-portal-frame" inert={!interactive} aria-hidden={!interactive}
         onWheelCapture={releaseNarrativeFocus} onTouchStartCapture={releaseNarrativeFocus}>
-        <AgentArsenal enabled={interactive} />
+        <AgentArsenal enabled={interactive && !startupCoverActive} prepareStartup={prepareStartup} onStartupProgress={onStartupProgress} />
       </div>
     </section>
   );

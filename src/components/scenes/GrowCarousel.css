@@ -17,7 +17,7 @@
   --gc-card-h: clamp(500px, 37vw, 590px);
   --gc-card-gap: 12px;
   --gc-card-radius: 18px;
-  --gc-wipe-span: 1.85;
+  --gc-wipe-span: 1.11;
   --gc-dwell: 1.4;
   --enter: 0;
   --y-left: 100%;

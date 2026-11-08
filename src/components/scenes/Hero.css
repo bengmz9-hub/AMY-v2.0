@@ -2,9 +2,9 @@
 .amy-hero {
   --color-sand: #d3c8ba;
   --color-ink-deep: #171220;
-  --hero-transition: 1.35;
-  --hero-dwell: .65;
-  --hero-wipe-span: 1.85;
+  --hero-transition: .81;
+  --hero-dwell: .15;
+  --hero-wipe-span: 1.11;
   position: relative;
   width: 100%;
   max-width: none;
@@ -934,7 +934,7 @@ body.comp-mode .amy-media-notice button:hover {
 /* Mobile composition: upper bio + signature row in safe headroom, portrait Sage card clear of bottom controls. */
 @media (max-width: 760px) {
   .amy-hero {
-    --hero-transition: 1;
+    --hero-transition: .6;
   }
   .amy-backdrop-word {
     top: 22%;

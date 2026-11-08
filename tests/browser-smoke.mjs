@@ -96,6 +96,24 @@ async function settle(page) {
   throw Error('Document scroll did not settle.');
 }
 
+async function wheelTo(page, readRemaining, predicate, maxSteps = 90) {
+  for (let step = 0; step < maxSteps; step++) {
+    if (await page.evaluate(predicate)) return;
+    const remaining = await page.evaluate(readRemaining);
+    const absRemaining = Math.abs(remaining);
+    const stepSize = absRemaining >= 245
+      ? Math.min(320, Math.round(absRemaining))
+      : Math.min(60, Math.max(16, Math.round(absRemaining)));
+    const delta = Math.sign(remaining) * stepSize;
+    if (!delta) break;
+    const previous = await page.evaluate(() => ({ y: scrollY, inner: document.querySelector('.grow-layout')?.scrollTop || 0 }));
+    await page.mouse.wheel(0, delta);
+    await page.waitForFunction(previous => Math.abs(scrollY - previous.y) > 0.1 ||
+      Math.abs((document.querySelector('.grow-layout')?.scrollTop || 0) - previous.inner) > 0.1, previous);
+  }
+  await page.waitForFunction(predicate);
+}
+
 async function readyAgents(page, engine = false) {
   await page.waitForFunction(() => {
     const portal = document.querySelector('.grow-portal-frame');
@@ -276,10 +294,13 @@ try {
     await readyAgents(page);
     // Follow the visitor's full Tab path through the archive and its footer.
     // This also exercises focus scrolling inside the scene's nested viewport.
+    let tabEnteredHero = false;
     for (let step = 0; step < 20; step++) {
       await page.keyboard.press('Tab');
+      if (await page.evaluate(() => Boolean(document.activeElement?.closest('.amy-hero')))) tabEnteredHero = true;
       if (await page.evaluate(() => document.activeElement.matches('.helix-portrait'))) break;
     }
+    check('Cold #agents Tab path skips covered Hero controls', !tabEnteredHero && await page.locator('.amy-stage').evaluate(el => el.inert));
     check('Native Tab reaches the selected portrait through the archive', await page.locator('.helix-portrait[aria-pressed="true"]').evaluate(el => el === document.activeElement));
     const beforeSelection = await page.evaluate(() => scrollY);
     await page.keyboard.press('ArrowRight');
@@ -310,32 +331,64 @@ try {
     }
     check('Native wheel reaches inner boundary before scene exit', await page.locator('.grow-layout').evaluate(el => el.scrollTop + el.clientHeight >= el.scrollHeight - 1) && await page.evaluate(() => window.nebulosaPreview.getState().pan === 0));
     async function arriveAmy() {
-      // The existing narrative gate requires a fresh gesture after 180ms quiet.
-      await delay(240);
-      await page.mouse.wheel(0, 30);
       await page.mouse.move(8, 450);
-      await page.waitForFunction(() => window.nebulosaPreview.getState().phase === 'hold' && window.nebulosaPreview.getState().pan === 1);
+      await wheelTo(
+        page,
+        () => {
+          const s = window.nebulosaPreview.getState();
+          return (s.nebulosaHoldStart + s.nebulosaHoldEnd) / 2 - scrollY;
+        },
+        () => {
+          const s = window.nebulosaPreview?.getState();
+          return s?.phase === 'hold' && s.pan === 1 && document.querySelectorAll('a.nebulosa-social[data-link-active="true"]').length === 5;
+        },
+      );
       await settle(page);
     }
     await arriveAmy();
     check('Native forward reaches AMY and all five social links', await page.locator('a.nebulosa-social[data-link-active="true"]').count() === 5);
     await hiddenFallback(page);
-    await delay(240);
-    await page.mouse.wheel(0, -30);
-    await page.waitForFunction(() => window.nebulosaPreview.getState().phase === 'flowHold' && window.nebulosaPreview.getState().pan === 0 && !document.querySelector('.grow-portal-frame').inert);
+    await wheelTo(
+      page,
+      () => {
+        const s = window.nebulosaPreview.getState();
+        return (s.flowHoldStart + s.flowHoldEnd) / 2 - scrollY;
+      },
+      () => {
+        const s = window.nebulosaPreview?.getState();
+        const portal = document.querySelector('.grow-portal-frame');
+        return s?.phase === 'flowHold' && s.pan === 0 && Boolean(portal && !portal.inert && portal.dataset.settled === 'true');
+      },
+    );
     await settle(page);
-    check('Native reverse restores the helix physical stop', await page.evaluate(() => Math.abs(scrollY - (window.nebulosaPreview.getState().flowHoldEnd - 2)) < 2));
+    check('Native reverse restores the helix physical stop', await page.evaluate(() => {
+      const s = window.nebulosaPreview.getState();
+      const portal = document.querySelector('.grow-portal-frame');
+      return scrollY >= s.flowHoldStart - 2 && scrollY <= s.flowHoldEnd + 2 && s.pan === 0 && !portal.inert && portal.dataset.settled === 'true';
+    }));
     await arriveAmy();
-    await delay(240);
-    await page.mouse.wheel(0, 30);
+    await wheelTo(
+      page,
+      () => {
+        const s = window.nebulosaPreview.getState();
+        return s.start + s.span - scrollY;
+      },
+      () => window.nebulosaPreview?.getState().closingProgress === 1 && !document.querySelector('.amy-about').inert,
+    );
     await endpoint(page, false);
     await page.keyboard.press('End');
     await endpoint(page, false);
     await menu(page, '#gear');
     await endpoint(page);
-    await delay(240);
-    await page.mouse.wheel(0, -20);
-    await page.waitForFunction(() => window.nebulosaPreview.getState().phase === 'hold');
+    await wheelTo(
+      page,
+      () => {
+        const s = window.nebulosaPreview.getState();
+        return (s.nebulosaHoldStart + s.nebulosaHoldEnd) / 2 - scrollY;
+      },
+      () => window.nebulosaPreview?.getState().phase === 'hold'
+        && document.querySelectorAll('a.nebulosa-social[data-link-active="true"]').length === 5,
+    );
     await settle(page);
     check('Reverse from focused setup restores active social links', await page.locator('a.nebulosa-social[data-link-active="true"]').count() === 5);
   });
@@ -373,9 +426,15 @@ try {
     await menu(page, '#gear');
     await endpoint(page);
     await page.mouse.move(8, 350);
-    await page.mouse.wheel(0, -20);
-    await page.waitForFunction(() => window.nebulosaPreview.getState().phase === 'hold'
-      && document.querySelectorAll('a.nebulosa-social[data-link-active="true"]').length === 5);
+    await wheelTo(
+      page,
+      () => {
+        const s = window.nebulosaPreview.getState();
+        return (s.nebulosaHoldStart + s.nebulosaHoldEnd) / 2 - scrollY;
+      },
+      () => window.nebulosaPreview?.getState().phase === 'hold'
+        && document.querySelectorAll('a.nebulosa-social[data-link-active="true"]').length === 5,
+    );
     for (const [width, height] of [[844, 390], [390, 844]]) {
       await page.setViewportSize({ width, height });
       await page.waitForFunction(() => window.nebulosaPreview.getState().phase === 'hold'
@@ -394,7 +453,7 @@ try {
     await settle(page);
     const before = await page.evaluate(() => scrollY);
     await page.mouse.move(8, 450);
-    await page.mouse.wheel(0, 20);
+    await page.mouse.wheel(0, 60);
     await page.waitForFunction(y => scrollY > y + 40, before);
     // Fault injection isolates media resize; the visitor's scroll remains native.
     const injectedInFlight = await page.locator('video').evaluate(video => {
@@ -405,11 +464,21 @@ try {
       return moving;
     });
     check('Controlled media resize occurs before the native move completes', injectedInFlight);
+    await wheelTo(
+      page,
+      () => {
+        const state = window.nebulosaPreview.getState();
+        return (state.flowHoldStart + state.flowHoldEnd) / 2 - scrollY;
+      },
+      () => {
+        const state = window.nebulosaPreview?.getState();
+        return Boolean(state && scrollY >= state.flowHoldStart && scrollY <= state.flowHoldEnd && state.pan === 0);
+      },
+    );
     await readyAgents(page);
     check('Controlled media resize does not interrupt native scene arrival', await page.evaluate(() => {
       const state = window.nebulosaPreview.getState();
-      const expected = state.start + state.layout.distances.flowHold[1] * innerHeight - 2;
-      return Math.abs(scrollY - expected) <= 1 && state.pan === 0;
+      return scrollY >= state.flowHoldStart - 2 && scrollY <= state.flowHoldEnd + 2 && state.pan === 0 && !document.querySelector('.grow-portal-frame').inert;
     }));
   });
 
@@ -482,11 +551,17 @@ try {
     await page.goto(`${baseURL}#gear`);
     await endpoint(page);
     await page.mouse.move(8, 450);
-    await page.mouse.wheel(0, -20);
-    await page.waitForFunction(() => {
-      const el = document.querySelector('.nebulosa-fallback');
-      return el && !el.hidden && !el.inert;
-    });
+    await wheelTo(
+      page,
+      () => {
+        const s = window.nebulosaPreview.getState();
+        return (s.nebulosaHoldStart + s.nebulosaHoldEnd) / 2 - scrollY;
+      },
+      () => {
+        const el = document.querySelector('.nebulosa-fallback');
+        return Boolean(el && !el.hidden && !el.inert);
+      },
+    );
     check('Unavailable WebGL exposes a readable fallback', await page.evaluate(() => window.__amyBlockedWebgl > 0) && await page.locator('.nebulosa-fallback').isVisible());
     await reachableLinks(page, context, '.nebulosa-fallback a[data-fallback-social]');
     check('Fallback retry remains available', await page.locator('.nebulosa-fallback button').isEnabled());

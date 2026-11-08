@@ -3,10 +3,14 @@ import createNebula from './background/c/scene.js';
 
 const FACTORIES = { c: createNebula };
 
-export default function ParticleBackdrop({ mode = 'c', paused, onPreference }) {
+export default function ParticleBackdrop({ mode = 'c', paused, onPreference, prepareStartup = false, onPrepared }) {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const pausedRef = useRef(paused);
+  const preparedCallback = useRef(onPrepared);
+  preparedCallback.current = onPrepared;
+  const preparationRequested = useRef(prepareStartup);
+  preparationRequested.current = prepareStartup;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -15,17 +19,18 @@ export default function ParticleBackdrop({ mode = 'c', paused, onPreference }) {
     canvas.__backgroundState = state;
     canvas.dataset.bgReady = 'false';
     let context;
-    try { context = canvas.getContext('2d', { alpha: true }); } catch { return undefined; }
-    if (!context) return undefined;
+    try { context = canvas.getContext('2d', { alpha: true }); } catch { preparedCallback.current?.('fallback'); return undefined; }
+    if (!context) { preparedCallback.current?.('fallback'); return undefined; }
     const scene = FACTORIES[mode]();
     const mask = document.createElement('canvas');
     const maskContext = mask.getContext('2d');
-    if (!maskContext) { scene.dispose(); return undefined; }
+    if (!maskContext) { scene.dispose(); preparedCallback.current?.('fallback'); return undefined; }
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     let reduced = media.matches;
     let manualPause = pausedRef.current;
     let disposed = false, inView = true, failed = false, maskDirty = true;
     let frame = 0, previous = 0, time = 0, width = 1, height = 1, dpr = 1;
+    let preparationReported = false;
     const pointer = { x: 0, y: 0, active: false };
     const desired = { x: 0, y: 0, active: false };
 
@@ -62,8 +67,8 @@ export default function ParticleBackdrop({ mode = 'c', paused, onPreference }) {
       maskContext.globalAlpha = 1; maskContext.filter = 'none';
       maskContext.globalCompositeOperation = 'source-over';
     }
-    function draw(delta = 0) {
-      if (disposed || failed || !inView || document.hidden) return;
+    function draw(delta = 0, preparing = false) {
+      if (disposed || failed || (!inView && !preparing) || document.hidden) return;
       try {
         if (maskDirty) updateMask();
         if (mode !== 'c') {
@@ -85,8 +90,9 @@ export default function ParticleBackdrop({ mode = 'c', paused, onPreference }) {
         context.restore();
         state.frames += 1; state.particles = scene.particleCount;
         canvas.dataset.bgReady = 'true';
+        if (!preparationReported) { preparationReported = true; preparedCallback.current?.('ready'); }
       } catch (error) {
-        failed = true; state.error = String(error?.message || error); canvas.dataset.bgReady = 'false'; stop();
+        failed = true; state.error = String(error?.message || error); canvas.dataset.bgReady = 'false'; stop(); preparedCallback.current?.('fallback');
       }
     }
     function tick(timestamp) {
@@ -118,13 +124,14 @@ export default function ParticleBackdrop({ mode = 'c', paused, onPreference }) {
       desired.active = true;
     }
     function leave() { desired.x = desired.y = 0; desired.active = false; }
-    function visibility() { leave(); if (document.hidden) stop(); else { maskDirty = true; paintAndRun(); } }
+    function prepare() { maskDirty = true; draw(0, true); }
+    function visibility() { leave(); if (document.hidden) stop(); else { maskDirty = true; if (preparationRequested.current) prepare(); paintAndRun(); } }
     function preference() {
       reduced = media.matches; state.reduced = reduced;
       pointer.x = pointer.y = desired.x = desired.y = 0; pointer.active = desired.active = false;
       stop(); onPreference?.(reduced); paintAndRun();
     }
-    engineRef.current = { setPaused(value) { manualPause = value; state.paused = value; stop(); if (!value) paintAndRun(); } };
+    engineRef.current = { prepare, setPaused(value) { manualPause = value; state.paused = value; stop(); if (!value) paintAndRun(); } };
     const observer = new ResizeObserver(zonesChanged);
     for (const element of scope.querySelectorAll('.proposal-layout,.lab-title,.agent-intro__copy,[data-role-icon]')) observer.observe(element);
     const sceneElement = scope.querySelector('.proposal-layout');
@@ -139,7 +146,7 @@ export default function ParticleBackdrop({ mode = 'c', paused, onPreference }) {
     document.addEventListener('visibilitychange', visibility);
     media.addEventListener('change', preference);
     state.reduced = reduced; onPreference?.(reduced);
-    try { resize(); } catch (error) { failed = true; state.error = String(error?.message || error); stop(); }
+    try { resize(); } catch (error) { failed = true; state.error = String(error?.message || error); stop(); preparedCallback.current?.('fallback'); }
 
     return () => {
       disposed = true; stop(); engineRef.current = null;
@@ -157,5 +164,6 @@ export default function ParticleBackdrop({ mode = 'c', paused, onPreference }) {
   }, [mode, onPreference]);
 
   useEffect(() => { pausedRef.current = paused; engineRef.current?.setPaused(paused); }, [paused]);
+  useEffect(() => { if (prepareStartup) engineRef.current?.prepare(); }, [prepareStartup]);
   return <div className="particle-backdrop" aria-hidden="true"><canvas ref={canvasRef} data-ambient-canvas data-background={mode} /></div>;
 }

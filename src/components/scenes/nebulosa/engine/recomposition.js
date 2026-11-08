@@ -1,6 +1,7 @@
 import * as THREE from './vendor/build/three.module.js';
 import desktop from './assets/recomposition-desktop.json';
 import mobile from './assets/recomposition-mobile.json';
+import { waitForGpu } from './wait-for-gpu.js';
 
 const rand=index=>{const x=Math.sin(index*12.9898+78.233)*43758.5453;return x-Math.floor(x);};
 const vertexShader=`
@@ -60,6 +61,7 @@ export function createRecomposition({canvas}){
   const emptyGeometry=new THREE.BufferGeometry(),points=new THREE.Points(emptyGeometry,material);
   points.frustumCulled=false;points.visible=false;scene.add(points);
   let width=0,height=0,progress=0,reduced=false,disposed=false,dirty=true,dpr=1;
+  let preparation=null,prepared=false,warmupDraws=0;
   function assertActive(){if(disposed)throw new Error('Recomposition has been disposed.');}
   function draw(){
     points.visible=width>0&&height>0&&progress>0&&progress<1&&!reduced;
@@ -68,6 +70,24 @@ export function createRecomposition({canvas}){
     dirty=false;
   }
   const api={
+    prepareStartup(){
+      assertActive();
+      if(prepared)return Promise.resolve(api.stats());
+      if(!preparation)preparation=(async()=>{
+        if(!width||!height||!points.geometry.attributes.position)throw new Error('Recomposition has not been measured.');
+        renderer.compile(scene,camera);
+        const priorVisible=points.visible,priorProgress=uniforms.uProgress.value;
+        try{
+          points.visible=true;uniforms.uProgress.value=.5;
+          renderer.render(scene,camera);warmupDraws++;
+        }finally{
+          points.visible=priorVisible;uniforms.uProgress.value=priorProgress;
+          if(priorVisible)renderer.render(scene,camera);else{renderer.info.reset();renderer.clear();}
+        }
+        await waitForGpu(renderer);assertActive();prepared=true;return api.stats();
+      })().catch(error=>{preparation=null;throw error;});
+      return preparation;
+    },
     resize(nextWidth,nextHeight,targets){
       assertActive();
       if(!Number.isFinite(nextWidth)||!Number.isFinite(nextHeight)||nextWidth<=0||nextHeight<=0)throw new RangeError('Recomposition dimensions must be positive finite numbers.');
@@ -95,12 +115,12 @@ export function createRecomposition({canvas}){
       if(!dirty&&next===progress&&reduce===reduced)return;
       progress=next;reduced=reduce;uniforms.uProgress.value=progress;draw();
     },
-    stats(){return{progress,pointCount:points.geometry.attributes.position?.count||0,visible:points.visible,width,height,render:{calls:renderer.info.render.calls}};},
+    stats(){return{progress,pointCount:points.geometry.attributes.position?.count||0,visible:points.visible,width,height,prepared,warmupDraws,render:{calls:renderer.info.render.calls}};},
     dispose(){
       if(disposed)return;
       disposed=true;points.visible=false;renderer.clear();
       for(const geometry of cache.values())geometry.dispose();cache.clear();
-      emptyGeometry.dispose();material.dispose();renderer.dispose();renderer.forceContextLoss();
+      emptyGeometry.dispose();material.dispose();renderer.dispose();if(!canvas.isConnected)renderer.forceContextLoss();
     }
   };
   return api;

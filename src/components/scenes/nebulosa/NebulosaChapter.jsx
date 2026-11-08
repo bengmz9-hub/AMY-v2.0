@@ -48,7 +48,11 @@ function EngineDOM({ children }) {
   </div>;
 }
 
-export default function NebulosaChapter() {
+export default function NebulosaChapter({ startupCoverActive = false, startupFontsReady = false, onStartupProgress }) {
+  const startupCover = useRef(startupCoverActive), startupCallback = useRef(onStartupProgress);
+  startupCover.current = startupCoverActive;
+  startupCallback.current = onStartupProgress;
+  const startStartupEngine = useRef(null), prepareStartupEngine = useRef(null), refreshStartup = useRef(null);
   const chapter = useRef(null), viewport = useRef(null), screen = useRef(null);
   const about = useRef(null), recompositionCanvas = useRef(null);
   const fallback = useRef(null), retryScene = useRef(null);
@@ -80,6 +84,7 @@ export default function NebulosaChapter() {
     let pendingFlowFocus = null, pendingSetupFocus = false, initialProgressApplied = false;
     let initialSetupFocusReady = false, initialSetupFocusCancelled = false;
     let recomposition, recompositionError = '', engineStarted = false, retryPending = false;
+    let engineStartPromise = null, preparingStartup = false;
     let measuredWidth = innerWidth, measuredHeight = innerHeight, lastScrollY = scrollY;
     const ease = value => { const t = clamp(value); return t * t * (3 - 2 * t); };
 
@@ -146,7 +151,10 @@ export default function NebulosaChapter() {
       // Native offsets stay independent of the outgoing wrapper's translation.
       const flowBottom = flowExitHost.offsetTop + flowExitHost.offsetHeight;
       const start = flowBottom - overlap;
-      Object.assign(state.current, { start, span, portalHeight, staticFlow, reduced: reduced.matches,
+      // CSS fractions and offsetHeight rounding can put the mathematical end
+      // just beyond the last reachable scroll pixel, especially on mobile.
+      const end = Math.min(start + span, document.scrollingElement.scrollHeight - innerHeight);
+      Object.assign(state.current, { start, span, end, portalHeight, staticFlow, reduced: reduced.matches,
         layout, holdPixels, flowHoldStart: start, flowHoldEnd: start + holdPixels,
         nebulosaHoldStart: start + layout.distances.hold[0] * innerHeight,
         nebulosaHoldEnd: start + layout.distances.hold[1] * innerHeight,
@@ -188,7 +196,7 @@ export default function NebulosaChapter() {
       if (pendingSetupFocus) scrollTo({ top: s.start + s.span, behavior: 'instant' });
       const p = clamp((scrollY - s.start) / s.span), phase = evaluateNebulosa(p, s.layout);
       lastScrollY = scrollY;
-      const closingProgress = s.start + s.span - scrollY <= 1 ? 1
+      const closingProgress = s.end - scrollY <= 1 ? 1
         : clamp((p - s.layout.ranges.hold[1]) / (1 - s.layout.ranges.hold[1]));
       const chapterPhase = closingProgress >= 1 ? 'about' : closingProgress > 0 ? 'recompose' : phase.phase;
       Object.assign(s, { progress: p, closingProgress, chapterPhase, active: scrollY >= s.start && scrollY <= s.start + s.span + innerHeight });
@@ -227,14 +235,14 @@ export default function NebulosaChapter() {
       fallback.current.style.opacity = String(1 - dissolve);
       let stats = api?.getStats();
       if (s.ready && api) {
-        api.setPresentationVisible?.(engineVisible && dissolve < 1);
+        api.setPresentationVisible?.(engineVisible && dissolve < 1 && !startupCover.current);
         // Keep the accepted live scene formed while A takes over its closing pixels.
         const engineProgress = Math.min(p, s.layout.ranges.hold[1]);
         if (previousEngineProgress !== engineProgress) {
           api.setStoryProgress(engineProgress);
           previousEngineProgress = engineProgress;
         }
-        const motionPaused = s.paused || s.reduced || !s.active || p >= 1;
+        const motionPaused = s.paused || s.reduced || !s.active || p >= 1 || startupCover.current;
         if (previousPause !== motionPaused) {
           api.setMotionPaused(motionPaused);
           previousPause = motionPaused;
@@ -284,18 +292,12 @@ export default function NebulosaChapter() {
       return [focused, socialHover.current].find(element => element && host.contains(element)
         && !element.closest('[inert]') && element.getAttribute('aria-hidden') === 'false') || null;
     }
-    function holdSocialWheel(event) {
-      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
-      if (event.deltaY > 0 && heldSocial()) event.preventDefault();
-    }
-    function holdSocialKey(event) {
-      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey
+    function releaseSocialFocus(event) {
+      if (event.key !== 'Escape' || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey
         || event.target?.isContentEditable || event.target?.closest?.('input, textarea, select')) return;
       if (!heldSocial()) return;
-      if (event.key === 'Escape') {
-        socialHover.current = null;
-        if (document.activeElement?.matches('a.nebulosa-social')) document.activeElement.blur();
-      } else if (['ArrowDown', 'PageDown', ' '].includes(event.key)) event.preventDefault();
+      socialHover.current = null;
+      if (document.activeElement?.matches('a.nebulosa-social')) document.activeElement.blur();
     }
     function rememberFlowFragment(event) {
       if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
@@ -389,11 +391,16 @@ export default function NebulosaChapter() {
       getState: () => ({ ...state.current, ...evaluateNebulosa(state.current.progress, state.current.layout), phase: state.current.chapterPhase, socialHold: heldSocial()?.dataset.social || null, recomposition: recomposition?.stats() || null, engine: window.amyReview?.getStats() || null }),
     };
     function startEngine() {
-      if (engineStarted || disposed) return;
+      if (engineStarted || disposed) return engineStartPromise;
       engineStarted = true;
       engineObserver.disconnect();
       engineImport ||= import('./engine/main.js');
-      engineImport.then(async () => {
+      engineStartPromise = engineImport.then(async () => {
+        if (disposed) return;
+        if (startupCover.current) {
+          window.amyReview?.setPresentationVisible(false);
+          window.amyReview?.setMotionPaused(true);
+        }
         try {
           const { createRecomposition } = await import('./engine/recomposition.js');
           if (disposed) return;
@@ -414,8 +421,35 @@ export default function NebulosaChapter() {
         console.error('No se ha podido importar el motor Nebulosa.', cause);
         setError(''); setSceneFailure(true); update();
       });
+      return engineStartPromise;
     }
-    // Prewarm near the chapter instead of downloading/allocating the portrait at Hero entry.
+    startStartupEngine.current = startEngine;
+    refreshStartup.current = update;
+    prepareStartupEngine.current = async () => {
+      if (preparingStartup || disposed) return;
+      preparingStartup = true;
+      await startEngine();
+      if (disposed) return;
+      try {
+        if (!window.amyReview?.prepareStartup) throw new Error('Particle engine unavailable.');
+        await window.amyReview.prepareStartup();
+        if (!disposed) startupCallback.current?.('nebula', 'ready');
+      } catch {
+        if (!disposed) startupCallback.current?.('nebula', 'fallback');
+      }
+      if (disposed) return;
+      try {
+        if (!recomposition) throw new Error('Recomposition unavailable.');
+        // Fonts and the actual destination layout have settled before this call.
+        measureRecomposition();
+        await recomposition.prepareStartup();
+        if (!disposed) startupCallback.current?.('recomposition', 'ready');
+      } catch {
+        if (!disposed) startupCallback.current?.('recomposition', 'fallback');
+      }
+      if (!disposed) { checkEngine(); update(); }
+    };
+    // Deep links and manual continuation retain the near-chapter loading path.
     const engineObserver = new IntersectionObserver(entries => {
       if (entries.some(entry => entry.isIntersecting)) startEngine();
     }, { rootMargin: `${Math.ceil(innerHeight * 2)}px 0px` });
@@ -426,8 +460,7 @@ export default function NebulosaChapter() {
     if (portal) observer.observe(portal);
     document.fonts.ready.then(() => { if (!disposed) measure(); });
     addEventListener('scroll', schedule, { passive: true });
-    addEventListener('wheel', holdSocialWheel, { passive: false });
-    addEventListener('keydown', holdSocialKey);
+    addEventListener('keydown', releaseSocialFocus);
     document.addEventListener('click', rememberFlowFragment, true);
     addEventListener('resize', measure);
     reduced.addEventListener('change', measure);
@@ -435,13 +468,14 @@ export default function NebulosaChapter() {
     host.addEventListener('nebulosa-pause', pauseEvent);
     return () => {
       disposed = true; cancelAnimationFrame(frame); clearTimeout(poll); observer.disconnect();
+      startStartupEngine.current = prepareStartupEngine.current = refreshStartup.current = null;
       retryScene.current = null;
       engineObserver.disconnect();
       cancelAnimationFrame(initialSetupFrame);
       cancelInitialSetupFocus();
       recomposition?.dispose();
       removeEventListener('scroll', schedule); removeEventListener('resize', measure);
-      removeEventListener('wheel', holdSocialWheel); removeEventListener('keydown', holdSocialKey);
+      removeEventListener('keydown', releaseSocialFocus);
       socialHover.current = null;
       document.removeEventListener('click', rememberFlowFragment, true);
       reduced.removeEventListener('change', measure); host.removeEventListener('nebulosa-pause', pauseEvent);
@@ -450,6 +484,14 @@ export default function NebulosaChapter() {
       delete window.nebulosaPreview;
     };
   }, []);
+
+  useEffect(() => {
+    refreshStartup.current?.();
+    if (startupCoverActive) {
+      startStartupEngine.current?.();
+      if (startupFontsReady) prepareStartupEngine.current?.();
+    }
+  }, [startupCoverActive, startupFontsReady]);
 
   useEffect(() => {
     const cursor = mountAbyssalCursor();
