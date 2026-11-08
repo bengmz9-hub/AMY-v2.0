@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { createNebulosaLayout, HERO_DWELL_FALLBACK } from '@/components/scenes/nebulosa/phases.js';
 
-// Optional local trial (?scroll=steps). The existing scenes still render scrollY.
+// Desktop screen journey. The existing scenes still render scrollY.
 export function useScreenSteps(enabled = false) {
   useEffect(() => {
     if (!enabled) return;
@@ -47,7 +47,6 @@ export function useScreenSteps(enabled = false) {
         { label: 'Gameplay', start: 0, end: 0 },
         { label: 'Hero', start: heroStart, end: heroStart + stage.offsetHeight * dwell },
         phase('Hélice', layout.distances.flowHold),
-        phase('Solar', layout.distances.field),
         phase('AMY', layout.distances.hold),
         { label: 'Setup', start: maximum, end: maximum },
       ].map(zone => ({ ...zone, target: clamp((zone.start + zone.end) / 2, 0, maximum) }));

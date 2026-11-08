@@ -110,6 +110,7 @@ async function wheelTo(page, readRemaining, predicate, maxSteps = 90) {
     await page.mouse.wheel(0, delta);
     await page.waitForFunction(previous => Math.abs(scrollY - previous.y) > 0.1 ||
       Math.abs((document.querySelector('.grow-layout')?.scrollTop || 0) - previous.inner) > 0.1, previous);
+    await settle(page);
   }
   await page.waitForFunction(predicate);
 }

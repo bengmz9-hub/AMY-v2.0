@@ -239,7 +239,7 @@ try {
 
   await scenario('isolated-coarse-and-fine-packets', {}, async (page, context) => {
     const client = await context.newCDPSession(page);
-    await page.goto(`${baseURL}#amy-home`);
+    await page.goto(`${baseURL}?scroll=continuous#amy-home`);
     await page.waitForFunction(() => document.querySelector('.amy-stage')?.dataset.phase === 'settled' && window.nebulosaPreview?.getState()?.ready);
     await settle(page);
     await installWheelRecorder(page);
@@ -347,7 +347,7 @@ try {
   });
 
   await scenario('coarse-cap-at-cold-entry', {}, async page => {
-    await page.goto(baseURL.href);
+    await page.goto(`${baseURL}?scroll=continuous`);
     await page.locator('.startup-cover').waitFor({state:'detached'});
     await page.waitForFunction(()=>window.nebulosaPreview?.getState().ready);
     await settle(page);
@@ -360,7 +360,7 @@ try {
 
   await scenario('rapid-coarse-and-fractional-streams', {}, async (page, context) => {
     const client = await context.newCDPSession(page);
-    await page.goto(`${baseURL}#amy-home`);
+    await page.goto(`${baseURL}?scroll=continuous#amy-home`);
     await page.waitForFunction(() => document.querySelector('.amy-stage')?.dataset.phase === 'settled' && window.nebulosaPreview?.getState()?.ready);
     await settle(page);
     await installWheelRecorder(page);
@@ -426,7 +426,7 @@ try {
   for (const kind of ['reverse', 'key', 'pointer', 'touch', 'active-key']) {
     await scenario('cancel-' + kind, {}, async (page, context) => {
       const client=await context.newCDPSession(page);
-      await page.goto(baseURL.href);
+      await page.goto(`${baseURL}?scroll=continuous`);
       await page.locator('.startup-cover').waitFor({state:'detached'});
       await page.waitForFunction(()=>window.nebulosaPreview?.getState().ready);
       await settle(page);
@@ -460,7 +460,7 @@ try {
   }
 
   await scenario('nested-scroller-zoom-menu-and-reduced-guards', { viewport: { width: 1280, height: 600 } }, async page => {
-    await page.goto(`${baseURL}#agents`);
+    await page.goto(`${baseURL}?scroll=continuous#agents`);
     await readyAgents(page, true);
     await installWheelRecorder(page);
 
@@ -496,7 +496,7 @@ try {
   });
 
   await scenario('zoom-and-menu-guards', {}, async page => {
-    await page.goto(`${baseURL}#amy-home`);
+    await page.goto(`${baseURL}?scroll=continuous#amy-home`);
     await page.waitForFunction(()=>document.querySelector('.amy-stage')?.dataset.phase==='settled'&&window.nebulosaPreview?.getState().ready);
     await settle(page);
     for(let step=0;step<12;step++){
@@ -521,7 +521,7 @@ try {
   });
 
   await scenario('reduced-motion-guard', { reducedMotion: 'reduce' }, async page => {
-    await page.goto(`${baseURL}#amy-home`);
+    await page.goto(`${baseURL}?scroll=continuous#amy-home`);
     await page.waitForFunction(() => document.querySelector('.amy-hero')?.dataset.static === 'true' && window.nebulosaPreview?.getState());
     const yStartReduced = await settle(page);
     await installWheelRecorder(page);

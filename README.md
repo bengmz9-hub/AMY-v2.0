@@ -20,7 +20,7 @@ Incluye soporte para `prefers-reduced-motion: reduce`, navegación por teclado y
 
 La entrada prepara los recursos de las escenas, incluido el vídeo seleccionado completo, y mantiene el indicador de carga al menos dos segundos visibles. Si los recursos tardan más, la entrada espera hasta que estén listos. El tiempo de una pestaña oculta no consume ese mínimo; los enlaces directos y la restauración del historial conservan su entrada propia.
 
-El modo habitual utiliza scroll continuo con ayuda breve para impulsos de rueda separados. También está disponible la variante [un gesto por pantalla](https://bengmz9-hub.github.io/AMY-v2.0/?scroll=steps): gameplay de entrada, Hero, Hélice, nebulosa solar, AMY con redes y Setup. Permite invertir el sentido y encadenar un gesto nuevo durante la transición; agrupa la cola de una misma ráfaga para conservar su destino. En dispositivos táctiles y con movimiento reducido se mantiene el desplazamiento nativo.
+El modo habitual de escritorio utiliza un gesto por pantalla: gameplay de entrada, Hero, Hélice, Nebulosa y Setup. La nebulosa solar se transforma en AMY con redes dentro de un solo paso, sin una parada adicional entre ambas formas. Permite invertir el sentido y encadenar un gesto nuevo durante la transición; agrupa la cola de una misma ráfaga para conservar su destino. El enlace anterior con `?scroll=steps` conserva este mismo recorrido. El [scroll continuo](https://bengmz9-hub.github.io/AMY-v2.0/?scroll=continuous) sigue disponible expresamente. En dispositivos táctiles y con movimiento reducido se mantiene el desplazamiento nativo.
 
 Pruebas dirigidas adicionales, ejecutadas contra una compilación ya servida:
 

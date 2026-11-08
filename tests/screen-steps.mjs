@@ -11,7 +11,7 @@ const report={url:root,browser:browser.version(),method:'Chrome native wheel/key
 const check=(name,pass,detail)=>{report.checks.push({name,pass:Boolean(pass),detail});assert(pass,name+': '+JSON.stringify(detail));};
 async function settle(page){let last=-1,stable=0;for(let i=0;i<60;i++){const y=await page.evaluate(()=>scrollY);stable=Math.abs(y-last)<=1?stable+1:0;if(stable>=3)return y;last=y;await delay(80);}throw Error('Scroll did not settle');}
 async function ready(page,fragment=''){
-  await page.goto(root+'?scroll=steps'+fragment,{waitUntil:'domcontentloaded'});
+  await page.goto(root+fragment,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>!document.querySelector('.startup-cover')&&window.nebulosaPreview?.getState().ready,{},{timeout:30000});
   await page.evaluate(()=>document.fonts.ready);await settle(page);await page.mouse.move(8,40);
 }
@@ -28,8 +28,7 @@ async function destination(page,label){
     if(label==='Gameplay')return y<=1;
     if(label==='Hero')return y>=h*Number(css.getPropertyValue('--hero-transition'))-1&&y<=h*(Number(css.getPropertyValue('--hero-transition'))+Number(css.getPropertyValue('--hero-dwell')))+1&&document.querySelector('.amy-stage').dataset.phase==='settled';
     if(label==='Helix')return y>=s.flowHoldStart-1&&y<=s.flowHoldEnd+1&&s.pan===0&&!document.querySelector('.grow-portal-frame').inert&&document.querySelector('.grow-portal-frame').dataset.settled==='true';
-    if(label==='Solar')return s.phase==='field'&&s.birth===1&&s.amyForm===0;
-    if(label==='AMY')return s.phase==='hold'&&document.querySelectorAll('a.nebulosa-social[data-link-active="true"]').length===5;
+        if(label==='AMY')return s.phase==='hold'&&document.querySelectorAll('a.nebulosa-social[data-link-active="true"]').length===5;
     return s.closingProgress===1&&!document.querySelector('.amy-about').inert&&Math.abs(y-(document.scrollingElement.scrollHeight-document.scrollingElement.clientHeight))<=1;
   },label,{timeout:10000});await settle(page);const state=await read(page);check('Arrived '+label,true,state);return state;
 }
@@ -45,20 +44,30 @@ async function scenario(name,options,action){
 try{
   await scenario('forward-and-reverse',{},async page=>{
     await ready(page);check('Cold entry remains at zero',await page.evaluate(()=>scrollY===0));
-    for(const label of ['Hero','Helix','Solar','AMY','Setup']){
+    for(const label of ['Hero','Helix','AMY','Setup']){
+      const transformation=label==='AMY'?page.evaluate(()=>new Promise(resolve=>{
+        const samples=[],started=performance.now();
+        function sample(now){const s=window.nebulosaPreview.getState();samples.push({at:now-started,y:scrollY,phase:s.phase,birth:s.birth,amy:s.amyForm});
+          if(now-started<1800)requestAnimationFrame(sample);else resolve(samples);}
+        requestAnimationFrame(sample);
+      })):null;
       await page.mouse.wheel(0,120);await destination(page,label);
-      if(['Solar','AMY','Setup'].includes(label))await page.screenshot({path:output+'/'+label+'.png'});
+      if(transformation){const samples=await transformation;report.transformation=samples;
+        const solar=samples.findIndex(s=>s.birth>.95&&s.amy<.05),morph=samples.findIndex(s=>s.amy>.05&&s.amy<.95);
+        check('One gesture includes Solar then its transformation into AMY',solar>=0&&morph>solar,{solar,morph,samples});
+      }
+      if(['AMY','Setup'].includes(label))await page.screenshot({path:output+'/'+label+'.png'});
     }
     const end=await page.evaluate(()=>scrollY);await page.mouse.wheel(0,120);check('No blank tail beyond Setup',(await settle(page))===end);
-    for(const label of ['AMY','Solar','Helix','Hero','Gameplay']){await page.mouse.wheel(0,-120);await destination(page,label);}
+    for(const label of ['AMY','Helix','Hero','Gameplay']){await page.mouse.wheel(0,-120);await destination(page,label);}
   });
   await scenario('one-rapid-burst-one-screen',{},async(page,context)=>{
     await ready(page,'#amy-home');const client=await context.newCDPSession(page),pending=[];
     for(let i=0;i<20;i++){pending.push(client.send('Input.dispatchMouseEvent',{type:'mouseWheel',x:8,y:40,deltaX:0,deltaY:120}));await delay(12);}await Promise.all(pending);
     await destination(page,'Helix');const events=await page.evaluate(()=>stepWheel);
     check('Burst is trusted and delivered as one gesture',events.length>1&&events.every(e=>e.trusted)&&events.slice(1).every((e,i)=>e.at-events[i].at<=160),events);
-    const y=await page.evaluate(()=>scrollY);await delay(300);check('Burst tail does not advance to Solar',Math.abs(await page.evaluate(()=>scrollY)-y)<=1);
-    await page.mouse.wheel(0,120);await destination(page,'Solar');
+    const y=await page.evaluate(()=>scrollY);await delay(300);check('Burst tail does not advance to Nebulosa',Math.abs(await page.evaluate(()=>scrollY)-y)<=1);
+    await page.mouse.wheel(0,120);await destination(page,'AMY');
   });
   await scenario('long-burst-does-not-scroll-incoming-panel',{},async(page,context)=>{
     await ready(page,'#amy-home');const before=await page.locator('.grow-layout').evaluate(el=>el.scrollTop);
@@ -82,7 +91,7 @@ try{
     await page.waitForFunction(()=>stepWheel.length&&performance.now()-stepWheel.at(-1).at>190&&scrollY>900);
     const beforeChain=await read(page);
     await client.send('Input.dispatchMouseEvent',{type:'mouseWheel',x:8,y:40,deltaX:0,deltaY:120});await next;
-    await destination(page,'Solar');check('Fresh gesture chained before Helix arrival',beforeChain.y<beforeChain.flowStart,beforeChain);
+    await destination(page,'AMY');check('Fresh gesture chained before Helix arrival',beforeChain.y<beforeChain.flowStart,beforeChain);
   });
   await scenario('reverse-a-chained-transition',{},async(page,context)=>{
     await ready(page,'#amy-home');const client=await context.newCDPSession(page);
@@ -111,8 +120,13 @@ try{
   for(const [name,options]of[['reduced-native',{reducedMotion:'reduce'}],['coarse-native',{hasTouch:true,viewport:{width:390,height:844},isMobile:true}]]){
     await scenario(name,options,async page=>{await ready(page);const before=await page.evaluate(()=>scrollY);await page.mouse.wheel(0,120);const after=await settle(page);check(name+' keeps native 120px',Math.abs(after-before-120)<=2,{before,after});});
   }
-  await scenario('default-mode-preserved',{},async page=>{
-    await page.goto(root);await page.waitForFunction(()=>!document.querySelector('.startup-cover')&&window.nebulosaPreview?.getState().ready);await settle(page);await page.mouse.move(8,40);const before=await page.evaluate(()=>scrollY);await page.mouse.wheel(0,120);const after=await settle(page);check('Default remains pulse120 to360',Math.abs(after-before-360)<=2,{before,after});
+  await scenario('continuous-mode-opt-in',{},async page=>{
+    await page.goto(root+'?scroll=continuous');await page.waitForFunction(()=>!document.querySelector('.startup-cover')&&window.nebulosaPreview?.getState().ready);await settle(page);await page.mouse.move(8,40);const before=await page.evaluate(()=>scrollY);await page.mouse.wheel(0,120);const after=await settle(page);check('Explicit continuous mode keeps pulse120 to360',Math.abs(after-before-360)<=2,{before,after});
+  });
+  await scenario('steps-query-compatible',{},async page=>{
+    await page.goto(root+'?scroll=steps#amy-home');await page.waitForFunction(()=>!document.querySelector('.startup-cover')&&window.nebulosaPreview?.getState().ready);await settle(page);await page.mouse.move(8,40);
+    await page.mouse.wheel(0,120);await destination(page,'Helix');
+    await page.mouse.wheel(0,120);await destination(page,'AMY');
   });
   report.status=report.cases.every(c=>c.status==='PASS')?'PASS':'FAIL';
 }catch(e){report.status='FAIL';report.failure=e.stack;}

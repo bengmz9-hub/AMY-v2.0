@@ -34,7 +34,7 @@ export default function App() {
     }
   }, [startup.active]);
   useScrollProgress();
-  const screenSteps = new URLSearchParams(location.search).get('scroll') === 'steps';
+  const screenSteps = new URLSearchParams(location.search).get('scroll') !== 'continuous';
   useWheelPulse(!screenSteps);
   useScreenSteps(screenSteps);
 

@@ -238,7 +238,7 @@ try {
   report.browser = browser.version();
 
   await scenario('continuous-wheel-and-stops', {}, async page => {
-    await page.goto(`${baseURL}#amy-home`);
+    await page.goto(`${baseURL}?scroll=continuous#amy-home`);
     await page.waitForFunction(() => document.querySelector('.amy-stage')?.dataset.phase === 'settled' && window.nebulosaPreview?.getState());
     await settle(page);
 
@@ -353,7 +353,7 @@ try {
   });
 
   await scenario('social-hover-and-focus-pagedown', {}, async page => {
-    await page.goto(`${baseURL}#agents`);
+    await page.goto(`${baseURL}?scroll=continuous#agents`);
     await readyAgents(page, true);
     await page.mouse.move(8, 450);
 
@@ -460,7 +460,7 @@ try {
   });
 
   await scenario('nested-inner-scroll-and-deep-links', { viewport: { width: 1280, height: 600 } }, async page => {
-    await page.goto(`${baseURL}#agents`);
+    await page.goto(`${baseURL}?scroll=continuous#agents`);
     await readyAgents(page, true);
 
     let tabVisitedHero = false;
@@ -517,7 +517,7 @@ try {
 
   await scenario('native-mobile-swipe-cdp', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }, async (page, context) => {
     const client = await context.newCDPSession(page);
-    await page.goto(`${baseURL}#amy-home`);
+    await page.goto(`${baseURL}?scroll=continuous#amy-home`);
     await page.waitForFunction(() => document.querySelector('.amy-stage')?.dataset.phase === 'settled' && window.nebulosaPreview?.getState());
     const startY = await settle(page);
 
@@ -579,7 +579,7 @@ try {
   });
 
   await scenario('reduced-motion-continuous-scroll', { reducedMotion: 'reduce' }, async page => {
-    await page.goto(`${baseURL}#amy-home`);
+    await page.goto(`${baseURL}?scroll=continuous#amy-home`);
     await page.waitForFunction(() => document.querySelector('.amy-hero')?.dataset.static === 'true' && window.nebulosaPreview?.getState());
     await settle(page);
     await page.mouse.move(8, 450);
