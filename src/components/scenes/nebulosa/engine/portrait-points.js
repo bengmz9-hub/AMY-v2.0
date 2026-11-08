@@ -94,6 +94,15 @@ void main() {
     endpoint.xy += hairJitter * .065 * hairPeriphery;
     vec3 destination = (modelMatrix * vec4(endpoint, 1.0)).xyz;
     world = nebulaTransit(source.world, destination, introFormed, seed, 1.0);
+    // Solar orbit: retain each grain's correspondence and both exact endpoints.
+    // Differential rotation and depth peak only while the portrait is forming.
+    if (introFormed > 0.0 && introFormed < 1.0) {
+      float crest = sin(introFormed * 3.14159265);
+      float angle = crest * 2.35 * (.35 + seed * .65);
+      world.xy = mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * world.xy;
+      world.xy *= 1.0 - crest * .16;
+      world.z += sin(seed * 6.2831853 + introFormed * 4.0) * crest * .80;
+    }
     vBridgeColor = source.color;
     vBridgeAlpha = source.alpha;
     vBridgeMix = 1.0 - introFormed;

@@ -48,13 +48,16 @@ try{
       const transformation=label==='AMY'?page.evaluate(()=>new Promise(resolve=>{
         const samples=[],started=performance.now();
         function sample(now){const s=window.nebulosaPreview.getState();samples.push({at:now-started,y:scrollY,phase:s.phase,birth:s.birth,amy:s.amyForm});
-          if(now-started<1800)requestAnimationFrame(sample);else resolve(samples);}
+          if(now-started<7000&&(s.phase!=='hold'||now-started<500))requestAnimationFrame(sample);else resolve(samples);}
         requestAnimationFrame(sample);
       })):null;
       await page.mouse.wheel(0,120);await destination(page,label);
       if(transformation){const samples=await transformation;report.transformation=samples;
         const solar=samples.findIndex(s=>s.birth>.95&&s.amy<.05),morph=samples.findIndex(s=>s.amy>.05&&s.amy<.95);
         check('One gesture includes Solar then its transformation into AMY',solar>=0&&morph>solar,{solar,morph,samples});
+        const span=phase=>{const frames=samples.filter(s=>s.phase===phase);return frames.at(-1)?.at-frames[0]?.at;};
+        check('Solar remains readable for at least900ms during the same step',span('field')>=900,{milliseconds:span('field')});
+        check('Portrait formation takes at least1700ms during the same step',span('amy')>=1700,{milliseconds:span('amy')});
       }
       if(['AMY','Setup'].includes(label))await page.screenshot({path:output+'/'+label+'.png'});
     }

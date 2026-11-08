@@ -47,7 +47,11 @@ export function useScreenSteps(enabled = false) {
         { label: 'Gameplay', start: 0, end: 0 },
         { label: 'Hero', start: heroStart, end: heroStart + stage.offsetHeight * dwell },
         phase('Hélice', layout.distances.flowHold),
-        phase('AMY', layout.distances.hold),
+        { ...phase('AMY', layout.distances.hold), beats: [
+          { y: start + layout.distances.birth[1] * height, time: 1000 },
+          { y: start + layout.distances.field[1] * height, time: 2100 },
+          { y: start + layout.distances.amy[1] * height, time: 4000 },
+        ] },
         { label: 'Setup', start: maximum, end: maximum },
       ].map(zone => ({ ...zone, target: clamp((zone.start + zone.end) / 2, 0, maximum) }));
     }
@@ -56,14 +60,42 @@ export function useScreenSteps(enabled = false) {
       const active = motion;
       if (!active) return;
       if (blocked() || Math.abs(scrollY - lastWritten) > 2) { cancel(); return; }
-      const t = clamp((now - active.started) / active.duration, 0, 1);
+      const elapsed = Math.min(now - active.started, active.duration);
+      const segment = active.path?.find(part => elapsed <= part.end) || active.path?.at(-1) || active;
+      const t = clamp((elapsed - (segment.start || 0)) / segment.duration, 0, 1);
       // Hermite: preserve same-direction velocity when a fresh gesture retargets.
-      const distance = active.to - active.from, tangent = active.velocity * active.duration;
-      const offset = distance * (3 * t * t - 2 * t * t * t) + tangent * (t * t * t - 2 * t * t + t);
-      active.currentVelocity = distance * (6 * t - 6 * t * t) / active.duration + active.velocity * (3 * t * t - 4 * t + 1);
-      scrollTo({ top: active.from + offset, behavior: 'instant' }); lastWritten = scrollY;
-      if (t < 1) frame = requestAnimationFrame(tick);
+      const distance = segment.to - segment.from, tangent = segment.velocity * segment.duration;
+      const endTangent = (segment.endVelocity || 0) * segment.duration;
+      const offset = distance * (3 * t * t - 2 * t * t * t) + tangent * (t * t * t - 2 * t * t + t) + endTangent * (t * t * t - t * t);
+      active.currentVelocity = distance * (6 * t - 6 * t * t) / segment.duration + segment.velocity * (3 * t * t - 4 * t + 1) + (segment.endVelocity || 0) * (3 * t * t - 2 * t);
+      scrollTo({ top: segment.from + offset, behavior: 'instant' }); lastWritten = scrollY;
+      if (elapsed < active.duration) frame = requestAnimationFrame(tick);
       else { scrollTo({ top: active.to, behavior: 'instant' }); lastWritten = scrollY; motion = null; }
+    }
+    function nebulaPath(zones, from, to, velocity) {
+      const helix = zones.find(zone => zone.label === 'Hélice');
+      const amy = zones.find(zone => zone.label === 'AMY');
+      if (!helix || !amy || ![helix.target, amy.target].includes(to)
+        || from >= amy.target + 2 || (to === helix.target && from <= helix.target + 2)) return null;
+      const beats = [{ y: helix.target, time: 0 }, ...amy.beats, { y: amy.target, time: 4800 }];
+      function timeAt(y) {
+        if (y <= beats[0].y) return 0;
+        for (let i = 1; i < beats.length; i++) if (y <= beats[i].y) {
+          const a = beats[i - 1], b = beats[i];
+          return a.time + (b.time - a.time) * (y - a.y) / (b.y - a.y);
+        }
+        return 4800;
+      }
+      const direction = Math.sign(to - from), origin = timeAt(from);
+      const points = [{ y: from, time: 0 }, ...beats.filter(beat => Math.abs(beat.time - origin) > 1 && direction * (beat.y - from) > 1 && direction * (to - beat.y) > 1)
+        .sort((a, b) => direction * (a.y - b.y)).map(beat => ({ y: beat.y, time: Math.abs(beat.time - origin) })),
+        { y: to, time: Math.abs(timeAt(to) - origin) }];
+      if (points.at(-1).time < 100) return null;
+      const slopes = points.slice(1).map((point, i) => (point.y - points[i].y) / (point.time - points[i].time));
+      const speeds = points.map((point, i) => i === 0 ? direction * Math.min(Math.abs(velocity), Math.abs(slopes[0]) * 2)
+        : i === points.length - 1 ? 0 : 2 * slopes[i - 1] * slopes[i] / (slopes[i - 1] + slopes[i]));
+      return points.slice(1).map((point, i) => ({ from: points[i].y, to: point.y, start: points[i].time, end: point.time,
+        duration: point.time - points[i].time, velocity: speeds[i], endVelocity: speeds[i + 1] }));
     }
     function move(direction) {
       const zones = landmarks();
@@ -87,6 +119,8 @@ export function useScreenSteps(enabled = false) {
         ? direction * Math.min(Math.abs(motion.currentVelocity), Math.abs(to - from) * 2.5 / duration) : 0;
       cancelAnimationFrame(frame);
       motion = { from, to, index, direction, duration, velocity, currentVelocity: velocity, started: performance.now() };
+      motion.path = nebulaPath(zones, from, to, velocity);
+      if (motion.path) motion.duration = motion.path.at(-1).end;
       lastWritten = scrollY; frame = requestAnimationFrame(tick);
       return true;
     }
