@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
+const HITMARKER_SIZE = 6;
+const HITMARKER_LINE_WIDTH = 1.5;
+
 export default function AimTrainer() {
   const canvasRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -146,8 +149,8 @@ export default function AimTrainer() {
           ctx.save();
           ctx.globalAlpha = hm.alpha;
           ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 1.5;
-          const hs = 6;
+          ctx.lineWidth = HITMARKER_LINE_WIDTH;
+          const hs = HITMARKER_SIZE;
           ctx.beginPath();
           ctx.moveTo(hm.x - hs, hm.y - hs);
           ctx.lineTo(hm.x + hs, hm.y + hs);
