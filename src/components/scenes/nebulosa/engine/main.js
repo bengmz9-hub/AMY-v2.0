@@ -1546,6 +1546,8 @@ async function loadAndBuildAssets() {
     }
 
     rebuildMesh(state.targetQuads);
+    // Release the ~37 MB of tonal fields; rebuildMesh recomputes them on demand (review tools only).
+    loadedAssets.fields = null;
     if (!platforms) platforms = await createPlatformMeshes({ THREE, scene, camera });
     updateCameraFrustum();
     state.time = 0;

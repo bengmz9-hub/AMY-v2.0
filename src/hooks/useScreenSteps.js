@@ -155,8 +155,8 @@ export function useScreenSteps(enabled = false) {
     }
     function key(event) {
       const direction = ['ArrowDown', 'PageDown', ' '].includes(event.key) ? 1 : ['ArrowUp', 'PageUp'].includes(event.key) ? -1 : 0;
-      if (!direction || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || blocked()
-        || event.target?.closest?.('a, button, input, textarea, select, [contenteditable]')
+      if (!direction || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || blocked()
+        || event.target?.closest?.('button, input, textarea, select, [contenteditable]')
         || nested(event.target instanceof Element ? event.target : null, direction)) { cancel(); return; }
       event.preventDefault();
       if (!event.repeat) move(direction);
