@@ -380,6 +380,10 @@ export default function NebulosaChapter({ startupCoverActive = false, startupFon
       scrollTo({ top: state.current.start + clamp(Number(progress) || 0) * state.current.span, behavior: 'instant' });
       snapPan = true; update();
     }
+    // Past this time without an engine the chapter shows its fallback instead of a black screen;
+    // polling continues, so a late engine still takes over (the ready branch clears the failure).
+    const ENGINE_LOADING_LIMIT_MS = 20000;
+    let loadingSince = 0;
     function checkEngine() {
       if (disposed) return;
       clearTimeout(poll); poll = 0;
@@ -409,7 +413,15 @@ export default function NebulosaChapter({ startupCoverActive = false, startupFon
         // A retry explicitly checks the renderer again; a permanent WebGL failure
         // does not need an endless background poll.
         update();
-      } else poll = setTimeout(checkEngine, 150);
+      } else {
+        loadingSince ||= performance.now();
+        if (!state.current.failed && performance.now() - loadingSince > ENGINE_LOADING_LIMIT_MS) {
+          state.current.failed = true;
+          setSceneFailure(true);
+          update();
+        }
+        poll = setTimeout(checkEngine, 150);
+      }
     }
     retryScene.current = async () => {
       if (disposed || retryPending) return;
@@ -576,7 +588,7 @@ export default function NebulosaChapter({ startupCoverActive = false, startupFon
 
   return <>
     <section ref={chapter} id="nebulosa-chapter" className="nebulosa-chapter" aria-label="Nebulosa">
-      <div id="gear" className="nebulosa-end-anchor" aria-hidden="true" />
+      <div id="gear" className="nebulosa-end-anchor" />
       <div ref={viewport} className="nebulosa-viewport">
         <div ref={screen} className="nebulosa-screen" inert aria-hidden="true"
           onWheelCapture={releaseNarrativeFocus} onTouchStartCapture={releaseNarrativeFocus}>

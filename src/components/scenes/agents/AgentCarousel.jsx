@@ -111,7 +111,7 @@ export default function AgentCarousel({ prepareStartup = false, startupCoverActi
 
   return (
     <section ref={sectionRef} className="grow-carousel-section grow-helix-section" aria-label="Especialidades tácticas y agentes de AMY">
-      <div id="agents" className="grow-carousel-anchor" aria-hidden="true" />
+      <div id="agents" className="grow-carousel-anchor" />
       <svg
         className="grow-diagonal-slash"
         viewBox="0 0 100 100"

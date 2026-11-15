@@ -115,7 +115,11 @@ export default function Hero({ startupCoverActive = false, onStartupProgress }) 
     }).catch(() => { if (!controller.signal.aborted) onGameplayError(); });
     return () => {
       controller.abort();
-      if (objectURL) URL.revokeObjectURL(objectURL);
+      if (objectURL) {
+        URL.revokeObjectURL(objectURL);
+        // Do not keep a revoked blob: a later retry would bind <video> to a dead URL.
+        setDownloadedVideo(prev => (prev?.src === objectURL ? null : prev));
+      }
     };
   }, [gameplaySrc, onGameplayError]);
 
@@ -746,6 +750,21 @@ export default function Hero({ startupCoverActive = false, onStartupProgress }) 
     setPaused((prev) => !prev);
   };
 
+  // Autoplay was refused: just start the video the visitor asked for, keeping the codec,
+  // the downloaded file and the scroll position (retry() would reset all of them).
+  const resumeBlockedVideo = () => {
+    pausedRef.current = false;
+    setPaused(false);
+    setStatus('ready');
+    gameplayVideo.current?.play().catch(error => {
+      if (error?.name === 'NotAllowedError') {
+        pausedRef.current = true;
+        setPaused(true);
+        setStatus('blocked');
+      }
+    });
+  };
+
   const retry = () => {
     setGameplayFailed(false);
     setGameplayCodec('av1');
@@ -767,7 +786,7 @@ export default function Hero({ startupCoverActive = false, onStartupProgress }) 
       data-paused={isVideoPaused}
       data-portrait-error={portraitError}
     >
-      <div id="amy-home" className="amy-settled-anchor" aria-hidden="true" />
+      <div id="amy-home" className="amy-settled-anchor" />
       <h1 id="amy-hero-title" className="sr-only">
         AMY — Valorant · Main Sage
       </h1>
@@ -1118,7 +1137,7 @@ export default function Hero({ startupCoverActive = false, onStartupProgress }) 
                   : 'Reproducción automática en pausa. Pulsa para activar el vídeo sin sonido.'}
             </p>
             {!portraitError && (
-              <button type="button" onClick={retry}>
+              <button type="button" onClick={status === 'blocked' ? resumeBlockedVideo : retry}>
                 {status === 'error' ? 'Reintentar vídeo' : 'Reproducir vídeo'}
               </button>
             )}

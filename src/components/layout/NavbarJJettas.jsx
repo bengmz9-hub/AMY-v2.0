@@ -81,17 +81,23 @@ export default function NavbarJJettas({ startupCoverActive = false }) {
       const items = [...navbar.querySelectorAll('a[href], button')];
       const first = items[0];
       const last = items.at(-1);
-      if (event.shiftKey && document.activeElement === first) {
+      // Focus can sit on <body> after clicking the overlay backdrop: keep Tab inside the menu.
+      const inside = navbar.contains(document.activeElement);
+      if (event.shiftKey && (document.activeElement === first || !inside)) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
+      } else if (!event.shiftKey && (document.activeElement === last || !inside)) {
         event.preventDefault();
         first.focus();
       }
     };
+    // Browser back/forward must not leave the page scroll-locked behind an open menu.
+    const onPopState = () => setOpen(false);
     document.addEventListener('keydown', onKey, true);
+    window.addEventListener('popstate', onPopState);
     return () => {
       document.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('popstate', onPopState);
       background.forEach((el, i) => { el.inert = inertStates[i]; });
       document.documentElement.style.overflow = htmlOverflow;
       document.body.style.overflow = bodyOverflow;
