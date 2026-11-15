@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import NavbarJJettas from '@/components/layout/NavbarJJettas.jsx';
-import Hero from '@/components/scenes/Hero.jsx';
-import AgentCarousel from '@/components/scenes/AgentCarousel.jsx';
+import Hero from '@/components/scenes/hero/Hero.jsx';
+import AgentCarousel from '@/components/scenes/agents/AgentCarousel.jsx';
 import NebulosaChapter from '@/components/scenes/nebulosa/NebulosaChapter.jsx';
 import { useScrollProgress } from '@/hooks/useScrollProgress.js';
 import { useWheelPulse } from '@/hooks/useWheelPulse.js';
