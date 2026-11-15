@@ -1,4 +1,4 @@
-// Observed Abyssal geometry: 4px dot, lagged 26px ring, 48px mint hover ring.
+// Abyssal geometry (enlarged for visibility on the AMY scene): 8px dot, 34px ring locked to it (no lag), 56px mint hover ring.
 export function mountAbyssalCursor({root = document.body} = {}) {
   const doc = root.ownerDocument, win = doc.defaultView;
   const fine = win.matchMedia('(pointer: fine) and (hover: hover)');
@@ -19,27 +19,16 @@ export function mountAbyssalCursor({root = document.body} = {}) {
     visible = false;hot = false;dot.hidden = ring.hidden = true;ring.dataset.hot = 'false';
     win.cancelAnimationFrame(frame);frame = 0;restoreNative();
   }
-  function tick(now) {
-    frame = 0;
-    if (disposed || !visible || !enabled()) {hide();return;}
-    const dt = Math.min(Math.max((now - lastTime) / 1000, 0), 1 / 30);lastTime = now;
-    const amount = 1 - Math.exp(-11 * dt);
-    ringX += (x - ringX) * amount;ringY += (y - ringY) * amount;
-    if (Math.hypot(x - ringX, y - ringY) < 0.03) {ringX = x;ringY = y;}
-    ring.style.transform = `translate3d(${ringX.toFixed(2)}px, ${ringY.toFixed(2)}px, 0)`;
-    if (ringX !== x || ringY !== y) frame = win.requestAnimationFrame(tick);
-  }
   function move(event) {
     if (disposed || event.pointerType === 'touch' || !enabled()) {hide();return;}
     x = event.clientX;y = event.clientY;
     if (!visible) {
-      ringX = x;ringY = y;ring.style.transform = `translate3d(${x}px, ${y}px, 0)`;
       visible = true;dot.hidden = ring.hidden = false;root.setAttribute(attribute, 'on');
     }
     hot = Boolean(event.target?.closest?.('a, button, input, select, textarea, [data-interactive], [role="button"]'));
     ring.dataset.hot = String(hot);
-    dot.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-    if (!frame) {lastTime = win.performance.now();frame = win.requestAnimationFrame(tick);}
+    ringX = x;ringY = y;
+    dot.style.transform = ring.style.transform = `translate3d(${x}px, ${y}px, 0)`;
   }
   const keyboard = event => {if (event.key === 'Tab' || event.key.startsWith('Arrow') || event.key === 'Escape') hide();};
   const visibility = () => {if (doc.hidden) hide();};
@@ -50,7 +39,7 @@ export function mountAbyssalCursor({root = document.body} = {}) {
   doc.addEventListener('keydown', keyboard);fine.addEventListener('change', hide);reduced.addEventListener('change', hide);
   return {
     stats: () => ({mounted: !disposed, visible, enabled: enabled(), reduced: reduced.matches,
-      fine: fine.matches, hot, x, y, ringX, ringY, lagLambda: 11}),
+      fine: fine.matches, hot, x, y, ringX, ringY, lagLambda: 0}),
     dispose() {
       if (disposed) return;disposed = true;hide();
       root.removeEventListener('pointermove', move);root.removeEventListener('pointerleave', hide);
