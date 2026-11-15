@@ -558,6 +558,20 @@ function initThree() {
     return false;
   }
 
+  // Three already prevents the default and rebuilds its GL state on restore; here the
+  // chapter is told so it can show the fallback while the context is gone and resume after.
+  dom.canvas.addEventListener('webglcontextlost', () => {
+    state.error = 'Se perdió el contexto gráfico (WebGL).';
+    setStatusUI('error', 'Se perdió el contexto gráfico', 'Recarga la página si la escena no vuelve.', false);
+    window.dispatchEvent(new CustomEvent('amy-engine-status'));
+  });
+  dom.canvas.addEventListener('webglcontextrestored', () => {
+    state.error = '';
+    setStatusUI('ready', '', '');
+    renderFrameSync(0);
+    window.dispatchEvent(new CustomEvent('amy-engine-status'));
+  });
+
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   renderer.setPixelRatio(dpr);
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -1922,7 +1936,8 @@ window.amyReview = {
     })().catch(error => {
       startupPreparation = null;
       state.error = String(error.message || error);
-      setStatusUI('error', 'No se pudo preparar la escena', 'Puedes continuar y reintentar la carga.', true);
+      // Retrying cannot help without a renderer (no WebGL): leave the page-reload path in that case.
+      setStatusUI('error', 'No se pudo preparar la escena', 'Puedes continuar y reintentar la carga.', Boolean(renderer));
       throw error;
     });
     return startupPreparation;

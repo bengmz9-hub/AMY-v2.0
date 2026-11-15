@@ -1,8 +1,6 @@
 /* Variables globales y modo competitivo. Valores y selectores conservados; las variables de escena siguen junto a sus componentes. */
-@theme {
-  --font-sans: var(--font-sans);
-  --font-cinzel: var(--font-cinzel);
-
+/* Valores base como propiedades normales: Tailwind no se importa, un @theme llegaba sin procesar al CSS publicado. */
+:root {
   /* Fondo general elegante */
   --color-bg-main: #08070a;
   --color-bg-card: #121116;

@@ -287,7 +287,7 @@ export default function NebulosaChapter({ startupCoverActive = false, startupFon
       const birth = evaluateNebulosa(storyProgress, s.layout).birth;
       // Effective values the engine renders (raw progress/birth stay in getState() as before).
       Object.assign(s, { storyProgress, storyBirth: birth });
-      const engineVisible = s.ready && (pan > .01 || birth > 0) && p < 1;
+      const engineVisible = s.ready && (pan > .01 || birth > 0) && closingProgress < 1;
       const dissolve = s.reduced ? Number(closingProgress > 0) : ease(closingProgress / .17);
       const fallbackVisible = s.failed && s.active && pan === 1 && birth > 0 && dissolve < 1;
       const releaseFallbackFocus = !fallbackVisible && fallback.current?.contains(document.activeElement);
@@ -305,7 +305,7 @@ export default function NebulosaChapter({ startupCoverActive = false, startupFon
           api.setStoryProgress(engineProgress);
           previousEngineProgress = engineProgress;
         }
-        const motionPaused = s.paused || s.reduced || !s.active || p >= 1 || startupCover.current;
+        const motionPaused = s.paused || s.reduced || !s.active || closingProgress >= 1 || startupCover.current;
         if (previousPause !== motionPaused) {
           api.setMotionPaused(motionPaused);
           previousPause = motionPaused;
@@ -539,7 +539,10 @@ export default function NebulosaChapter({ startupCoverActive = false, startupFon
     reduced.addEventListener('change', measure);
     const pauseEvent = () => schedule();
     host.addEventListener('nebulosa-pause', pauseEvent);
+    // The engine reports a lost or restored WebGL context so the fallback follows it.
+    addEventListener('amy-engine-status', checkEngine);
     return () => {
+      removeEventListener('amy-engine-status', checkEngine);
       disposed = true; cancelAnimationFrame(frame); clearTimeout(poll); observer.disconnect();
       startStartupEngine.current = prepareStartupEngine.current = refreshStartup.current = null;
       retryScene.current = null;
