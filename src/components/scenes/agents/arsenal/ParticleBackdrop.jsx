@@ -121,10 +121,11 @@ export default function ParticleBackdrop({ mode = 'c', paused, onPreference, pre
     }
     function zonesChanged() {
       maskDirty = true;
-      if (canRun() || manualPause || disposed || failed || !inView || document.hidden || portalHidden() || zoneFrame) return;
+      // A paused backdrop still needs one static repaint so its mask follows the reading zones.
+      if (canRun() || disposed || failed || !inView || document.hidden || portalHidden() || zoneFrame) return;
       zoneFrame = requestAnimationFrame(() => {
         zoneFrame = 0;
-        if (!canRun() && !manualPause && !portalHidden()) draw();
+        if (!canRun() && !portalHidden()) draw();
       });
     }
     function move(event) {

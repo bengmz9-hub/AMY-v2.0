@@ -53,6 +53,7 @@ export default function Hero({ startupCoverActive = false, onStartupProgress }) 
   const phaseRef = useRef('gameplay');
   const pausedRef = useRef(false);
   const zoomedRef = useRef(false);
+  const closingZoomRef = useRef(false);
   const diveRef = useRef(1); // Used when zoomed into glasses from settled state (1 = in glasses, 0 = fullscreen)
   const diveAnimRef = useRef(0);
   const savedScrollYRef = useRef(0);
@@ -249,6 +250,7 @@ export default function Hero({ startupCoverActive = false, onStartupProgress }) 
     cancelAnimationFrame(diveAnimRef.current);
     diveAnimRef.current = 0;
     diveRef.current = 1;
+    closingZoomRef.current = false;
     zoomedRef.current = false;
     setZoomed(false);
     redraw.current();
@@ -596,6 +598,7 @@ export default function Hero({ startupCoverActive = false, onStartupProgress }) 
   const openGlassesView = useCallback(() => {
     if (phaseRef.current !== 'settled' || zoomedRef.current || staticScene) return;
     savedScrollYRef.current = window.scrollY;
+    closingZoomRef.current = false;
     zoomedRef.current = true;
     setZoomed(true);
     if (pausedRef.current) {
@@ -609,8 +612,11 @@ export default function Hero({ startupCoverActive = false, onStartupProgress }) 
   }, [animateDive, staticScene]);
 
   const closeGlassesView = useCallback(() => {
-    if (!zoomedRef.current) return;
+    // One close animation at a time: repeated Escape / wheel ticks must not restart it.
+    if (!zoomedRef.current || closingZoomRef.current) return;
+    closingZoomRef.current = true;
     animateDive(1, 680, () => {
+      closingZoomRef.current = false;
       zoomedRef.current = false;
       setZoomed(false);
       if (Math.abs(window.scrollY - savedScrollYRef.current) > 4) {
@@ -629,16 +635,37 @@ export default function Hero({ startupCoverActive = false, onStartupProgress }) 
     let touchStartY = null;
     let wheelAccum = 0;
 
+    const SCROLL_KEYS = ['PageDown', 'PageUp', 'ArrowDown', 'ArrowUp', 'Home', 'End', ' '];
     const onKeyDown = (e) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         closeGlassesView();
+        return;
+      }
+      if (e.key === 'Tab') {
+        // Keep keyboard focus inside the fullscreen overlay (also while it is still on <body>).
+        const overlay = zoomCloseBtn.current?.closest('.amy-zoom-overlay');
+        const items = overlay ? [...overlay.querySelectorAll('button:not([disabled])')] : [];
+        if (!items.length) return;
+        const inside = overlay.contains(document.activeElement);
+        if (e.shiftKey && (!inside || document.activeElement === items[0])) {
+          e.preventDefault();
+          items.at(-1).focus();
+        } else if (!e.shiftKey && (!inside || document.activeElement === items.at(-1))) {
+          e.preventDefault();
+          items[0].focus();
+        }
+        return;
+      }
+      // The page behind must not scroll while zoomed; a focused button keeps Space/Enter.
+      if (SCROLL_KEYS.includes(e.key) && !(e.key === ' ' && e.target instanceof Element && e.target.closest('button'))) {
+        e.preventDefault();
       }
     };
     const onWheel = (e) => {
       if (!zoomedRef.current) return;
+      e.preventDefault();
       if (e.deltaY > 0) {
-        e.preventDefault();
         wheelAccum += e.deltaY;
         if (wheelAccum > 45) {
           wheelAccum = 0;
@@ -652,7 +679,9 @@ export default function Hero({ startupCoverActive = false, onStartupProgress }) 
       touchStartY = e.touches[0]?.clientY ?? null;
     };
     const onTouchMove = (e) => {
-      if (touchStartY == null || !zoomedRef.current) return;
+      if (!zoomedRef.current) return;
+      if (e.cancelable) e.preventDefault();
+      if (touchStartY == null) return;
       const dy = touchStartY - (e.touches[0]?.clientY ?? touchStartY);
       if (dy > 40) {
         touchStartY = null;
@@ -663,7 +692,7 @@ export default function Hero({ startupCoverActive = false, onStartupProgress }) 
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('wheel', onWheel, { passive: false });
     window.addEventListener('touchstart', onTouchStart, { passive: true });
-    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('wheel', onWheel);
@@ -727,6 +756,7 @@ export default function Hero({ startupCoverActive = false, onStartupProgress }) 
     if (reduced) setManualVideoRequested(true);
     pausedRef.current = false;
     setPaused(false);
+    closingZoomRef.current = false;
     setSignatureKey((k) => k + 1);
     if (gameplayVideo.current) {
       try {

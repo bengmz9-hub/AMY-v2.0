@@ -17,6 +17,9 @@ export function useScreenSteps(enabled = false) {
     };
     function cancel(event) {
       if ((event?.type === 'resize' || event?.type === 'blur') && event.target !== window) return;
+      // A mouse click on the final scene (social icons) must not strand the step to AMY half-way.
+      if (event?.type === 'pointerdown' && event.pointerType === 'mouse' && event.button === 0
+        && event.target instanceof Element && event.target.closest('#nebulosa-chapter')) return;
       cancelAnimationFrame(frame); frame = 0; motion = null;
       intent = 0; used = false; lastWritten = scrollY;
     }
