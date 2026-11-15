@@ -17,11 +17,11 @@ export const AGENTS = [
       },
       Q: {
         name: 'Orbe de Ralentización (Q)',
-        desc: 'Perfecto para relentizar o detener ejecuciones enemigas rápidas',
+        desc: 'Perfecto para ralentizar o detener ejecuciones enemigas rápidas',
       },
       E: {
         name: 'Orbe de Curación (E)',
-        desc: 'Lo utilizo para curar a mi equipo o a mi misma',
+        desc: 'Lo utilizo para curar a mi equipo o a mí misma',
       },
       X: {
         name: 'Resurrección (X)',

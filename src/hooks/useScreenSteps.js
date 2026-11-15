@@ -47,10 +47,16 @@ export function useScreenSteps(enabled = false) {
         { label: 'Gameplay', start: 0, end: 0 },
         { label: 'Hero', start: heroStart, end: heroStart + stage.offsetHeight * dwell },
         phase('Hélice', layout.distances.flowHold),
-        { ...phase('AMY', layout.distances.hold), beats: [
+        // The born nebula is shown for a moment (250 ms of Solar field) and AMY's fusion
+        // follows at once. AMY and her socials are complete by about 55% of the amy range
+        // (the engine leads it, see NebulosaChapter); the rest only carries the scroll on
+        // to the labels. The 20% and 65% beats keep the fusion's own pacing as it was.
+        { ...phase('AMY', layout.distances.hold), arrival: 2700, beats: [
           { y: start + layout.distances.birth[1] * height, time: 850 },
-          { y: start + layout.distances.field[1] * height, time: 1200 },
-          { y: start + layout.distances.amy[1] * height, time: 4050 },
+          { y: start + layout.distances.field[1] * height, time: 1100 },
+          { y: start + (layout.distances.amy[0] * .8 + layout.distances.amy[1] * .2) * height, time: 1380 },
+          { y: start + (layout.distances.amy[0] * .35 + layout.distances.amy[1] * .65) * height, time: 2050 },
+          { y: start + layout.distances.amy[1] * height, time: 2220 },
         ] },
         { label: 'Setup', start: maximum, end: maximum },
       ].map(zone => ({ ...zone, target: clamp((zone.start + zone.end) / 2, 0, maximum) }));
@@ -77,14 +83,14 @@ export function useScreenSteps(enabled = false) {
       const amy = zones.find(zone => zone.label === 'AMY');
       if (!helix || !amy || ![helix.target, amy.target].includes(to)
         || from >= amy.target + 2 || (to === helix.target && from <= helix.target + 2)) return null;
-      const beats = [{ y: helix.target, time: 0 }, ...amy.beats, { y: amy.target, time: 4800 }];
+      const beats = [{ y: helix.target, time: 0 }, ...amy.beats, { y: amy.target, time: amy.arrival }];
       function timeAt(y) {
         if (y <= beats[0].y) return 0;
         for (let i = 1; i < beats.length; i++) if (y <= beats[i].y) {
           const a = beats[i - 1], b = beats[i];
           return a.time + (b.time - a.time) * (y - a.y) / (b.y - a.y);
         }
-        return 4800;
+        return amy.arrival;
       }
       const direction = Math.sign(to - from), origin = timeAt(from);
       const points = [{ y: from, time: 0 }, ...beats.filter(beat => Math.abs(beat.time - origin) > 1 && direction * (beat.y - from) > 1 && direction * (to - beat.y) > 1)
@@ -100,10 +106,11 @@ export function useScreenSteps(enabled = false) {
     function move(direction) {
       const zones = landmarks();
       const reversing = motion && direction !== motion.direction;
-      let index;
+      let index, arrived = false;
       if (motion && !reversing) index = motion.index + direction;
       else {
         const inside = zones.findIndex(zone => scrollY >= zone.start - 2 && scrollY <= zone.end + 2);
+        arrived = reversing && inside >= 0 && inside === motion.index;
         index = inside >= 0 ? inside + (reversing ? 0 : direction) : direction > 0
           ? zones.findIndex(zone => zone.target > scrollY + 2)
           : zones.findLastIndex(zone => zone.target < scrollY - 2);
@@ -113,7 +120,9 @@ export function useScreenSteps(enabled = false) {
       // Reverse toward a reached scene, even if earlier gestures chained past
       // an unvisited target. Never move forward to its center on an up gesture.
       const to = reversing ? direction > 0 ? Math.max(from, target) : Math.min(from, target) : target;
-      if (Math.abs(to - from) <= 1) { cancel(); return true; }
+      // A step that has already entered its destination scene and is only settling
+      // into it: reversing starts a fresh step back instead of being swallowed.
+      if (Math.abs(to - from) <= 1) { cancel(); return arrived ? move(direction) : true; }
       const duration = 620 + Math.min(3, Math.abs(to - from) / innerHeight) * 70;
       const velocity = motion && Math.sign(motion.currentVelocity) === direction
         ? direction * Math.min(Math.abs(motion.currentVelocity), Math.abs(to - from) * 2.5 / duration) : 0;

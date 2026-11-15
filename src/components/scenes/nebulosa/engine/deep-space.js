@@ -108,6 +108,9 @@ export function createDeepSpace({THREE,scene,camera,renderer}) {
   const material=new THREE.ShaderMaterial({uniforms:starUniforms,vertexShader:starVertex,fragmentShader:starFragment,transparent:true,blending:THREE.AdditiveBlending,depthTest:false,depthWrite:false});
   const stars=new THREE.Points(geometry,material);stars.name='deep-space-stars';stars.frustumCulled=false;stars.renderOrder=-10;scene.add(stars);
   let cacheKey='',gasPasses=0,opacity=0,active=false;
+  // Stars fade in over STARS_FADE_SECONDS once AMY has gathered instead of switching on
+  // in one frame. Controlled frames and any decrease take the target directly.
+  const STARS_FADE_SECONDS=.8;let starsShown=0,starsTime=NaN;
   function resize(width,height){
     atmosphere.resize(width,height);
     yellow.resize(width,height);
@@ -123,21 +126,23 @@ export function createDeepSpace({THREE,scene,camera,renderer}) {
   return {
     gasMesh,stars,cosmic,resize,
     getYellowMorphSource(){return yellow.getMorphSource();},
-    update({phase,time,mode,reduced,pointer,pointerStrength=0,paused=false}){
+    update({phase,time,mode,reduced,animated=false,pointer,pointerStrength=0,paused=false,formation=phase.logoGather}){
       // The original Abyssal field owns the intro. The previous background is
       // retained for the established portrait release/outflow, after amyGather=1.
       atmosphere.update({phase:{...phase,active:phase.active&&phase.amyGather>=1},time,mode,reduced,pointer,pointerStrength,paused});
       yellow.update({phase,time,mode,reduced,pointer,pointerStrength,paused});
-      cosmic.update({phase,time,mode,reduced,pointer,pointerStrength,paused});
+      cosmic.update({phase,time,mode,reduced,pointer,pointerStrength,paused,formation});
       active=phase.active&&mode==='portrait'&&phase.birth>0&&phase.outflow<1;
       const formed=phase.amyForm;
       // The galaxy surrenders its light to the photograph. Stars survive only at 2%.
       opacity=phase.birth*(1-phase.outflow)*Math.pow(1-formed,2.1);
       // The visible nebula is exclusively free point sprites, with no gas plane.
-      gasMesh.visible=false;stars.visible=active&&phase.amyGather>=1;
+      const starsTarget=active&&phase.amyGather>=1?1:0,elapsed=time-starsTime;starsTime=time;
+      starsShown=animated&&starsTarget>starsShown?(elapsed>0?Math.min(starsTarget,starsShown+Math.min(elapsed,.05)/STARS_FADE_SECONDS):starsShown):starsTarget;
+      gasMesh.visible=false;stars.visible=starsShown>0;
       displayUniforms.uOpacity.value=opacity*.32;displayUniforms.uForm.value=formed;
       const u=gasUniforms;u.uTime.value=reduced?0:time;u.uBirth.value=phase.birth;u.uGather.value=phase.amyGather;u.uRelease.value=phase.amyRelease;u.uOutflow.value=phase.outflow;u.uReduced.value=reduced?1:0;
-      const s=starUniforms;s.uTime.value=reduced?0:time;s.uBirth.value=phase.birth;s.uForm.value=formed;s.uOutflow.value=phase.outflow;s.uReduced.value=reduced?1:0;s.uOpacity.value=1-formed*.98;
+      const s=starUniforms;s.uTime.value=reduced?0:time;s.uBirth.value=phase.birth;s.uForm.value=formed;s.uOutflow.value=phase.outflow;s.uReduced.value=reduced?1:0;s.uOpacity.value=(1-formed*.98)*starsShown;
     },
     render(){
       if(!gasMesh.visible)return;

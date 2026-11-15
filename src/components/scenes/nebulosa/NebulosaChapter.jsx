@@ -16,6 +16,48 @@ const socialDestinations = {
 let engineImport;
 const fallbackPortrait = new URL('./engine/assets/amy-rgba.png', import.meta.url).href;
 
+// The visual Flow pan follows the native scroll with the Hero wipe's approved
+// 0.1-at-60Hz response, independent of refresh rate. step() reports whether it
+// still needs another frame; it settles exactly on the target.
+function createPanFollower() {
+  let value = 0, last = null, initialized = false;
+  return {
+    get value() { return value; },
+    step(target, now, snap) {
+      if (!initialized || snap) { value = target; initialized = true; last = null; return false; }
+      const elapsed = last === null ? 1000 / 60 : Math.max(0, now - last);
+      value += (target - value) * (1 - Math.pow(1 - .1, elapsed * 60 / 1000));
+      if (Math.abs(target - value) < .0004) value = target;
+      const moving = value !== target;
+      last = moving ? now : null;
+      return moving;
+    },
+  };
+}
+// Nebulosa is born under the last 80% of the Flow pan, so the incoming screen is
+// already alive. Between that point and the native birth the engine ignores progress.
+function overlapBirth(progress, ranges) {
+  const start = ranges.flow[0] + .2 * (ranges.flow[1] - ranges.flow[0]), [birthStart, birthEnd] = ranges.birth;
+  return progress <= start || progress >= birthEnd ? progress
+    : birthStart + (progress - start) * (birthEnd - birthStart) / (birthEnd - start);
+}
+
+// AMY's fusion opens with an invisible stretch (amyGather below ~.04). The engine crosses
+// it while the scroll is still on the Solar field, so the nebula starts to change as soon
+// as that brief field ends. The lead is held through the whole formation, whose pacing is
+// therefore unchanged, and is given back over the settled tail of the amy range.
+const AMY_LEAD = .12, AMY_LEAD_UNTIL = .6;
+function leadAmy(progress, ranges) {
+  const [fieldStart, fieldEnd] = ranges.field, amyEnd = ranges.amy[1];
+  if (progress <= fieldStart || progress >= amyEnd) return progress;
+  const lead = AMY_LEAD * (amyEnd - fieldEnd), join = fieldEnd + AMY_LEAD_UNTIL * (amyEnd - fieldEnd);
+  if (progress <= fieldEnd) return fieldStart + (progress - fieldStart) * (fieldEnd + lead - fieldStart) / (fieldEnd - fieldStart);
+  if (progress <= join) return progress + lead;
+  return join + lead + (progress - join) * (amyEnd - join - lead) / (amyEnd - join);
+}
+// What the engine renders for a native scroll progress.
+function engineStory(progress, ranges) { return leadAmy(overlapBirth(progress, ranges), ranges); }
+
 // Required DOM for the existing renderer. Its review controls remain mounted but hidden.
 // Engine styles are deliberately not imported: their html/body rules disable native scroll.
 function EngineDOM({ children }) {
@@ -87,6 +129,8 @@ export default function NebulosaChapter({ startupCoverActive = false, startupFon
     let engineStartPromise = null, preparingStartup = false;
     let measuredWidth = innerWidth, measuredHeight = innerHeight, lastScrollY = scrollY;
     const ease = value => { const t = clamp(value); return t * t * (3 - 2 * t); };
+    const panFollower = createPanFollower();
+    let snapPan = true;
 
     function measureRecomposition() {
       if (!recomposition) return;
@@ -166,13 +210,15 @@ export default function NebulosaChapter({ startupCoverActive = false, startupFon
       schedule();
     }
 
-    function placeLabel(element, anchor, opacity, linksActive) {
+    // opacity: the scroll's label envelope, which still owns the link state.
+    // ink: what is painted, which enters with the label's own glyph.
+    function placeLabel(element, anchor, opacity, linksActive, ink = opacity) {
       if (!element) return;
       const valid = anchor && Number.isFinite(anchor.x) && Number.isFinite(anchor.y);
-      const visible = valid && opacity > .01;
-      const clickable = visible && linksActive && element.hasAttribute('href');
+      const visible = valid && (opacity > .01 || ink > .01);
+      const clickable = valid && opacity > .01 && linksActive && element.hasAttribute('href');
       element.style.visibility = visible ? 'visible' : 'hidden';
-      element.style.opacity = String(valid ? opacity : 0);
+      element.style.opacity = String(valid ? ink : 0);
       element.setAttribute('aria-hidden', String(!visible));
       element.inert = !visible || (element.tagName === 'A' && !clickable);
       if (element.tagName === 'A') {
@@ -205,28 +251,45 @@ export default function NebulosaChapter({ startupCoverActive = false, startupFon
       host.dataset.phase = chapterPhase;
       // Two full-width neighboring screens share one pan envelope. Only this outer
       // wrapper owns the bridge; the source portal, cards and React state stay intact.
-      const exit = phase.flowExit, pan = s.reduced ? Number(exit >= 1) : exit;
+      // Only the visual pan is damped; reduced motion, direct jumps, fragment focus,
+      // first paint and positions outside the chapter take the target at once.
+      const exit = phase.flowExit;
+      const snap = snapPan || s.reduced || !s.active || pendingFlowFocus || pendingSetupFocus || initialSetupFocusReady;
+      const following = panFollower.step(s.reduced ? Number(exit >= 1) : exit, performance.now(), snap);
+      snapPan = false;
+      const pan = panFollower.value;
       const bridgeEnd = s.start + s.layout.distances.flow[1] * innerHeight;
+      // The vertical compensation stays locked to the native scroll position;
+      // interaction follows the converged pan.
       const releaseDistance = Math.max(0, Math.min(scrollY, bridgeEnd) - s.flowRelease);
-      flowExitHost.style.transform = exit > 0
+      flowExitHost.style.transform = exit > 0 || pan > 0
         ? `translate3d(${-pan * innerWidth}px,${releaseDistance}px,0)` : 'none';
-      flowExitHost.inert = exit > 0;
-      flowExitHost.style.pointerEvents = exit > 0 ? 'none' : '';
+      flowExitHost.inert = pan > 0;
+      flowExitHost.style.pointerEvents = pan > 0 ? 'none' : '';
       // Navbar's native fragment focus can run before this frame releases inert.
       // Complete that existing focus intent once the actual Flow panel is restored.
-      if (pendingFlowFocus && exit === 0 && !pendingFlowFocus.closest('[inert]')) {
+      if (pendingFlowFocus && pan === 0 && !pendingFlowFocus.closest('[inert]')) {
         pendingFlowFocus.focus({ preventScroll: true });
         pendingFlowFocus = null;
       }
-      screen.current.style.transform = `translate3d(${(1 - pan) * innerWidth}px,0,0)`;
+      // The incoming edge dissolves over the outgoing panel instead of a hard seam.
+      const seam = .24 * innerWidth * Math.sin(Math.PI * pan);
+      screen.current.style.transform = `translate3d(${((1 - pan) * innerWidth - seam).toFixed(2)}px,0,0)`;
+      screen.current.style.maskImage = screen.current.style.webkitMaskImage = seam > .5
+        ? `linear-gradient(90deg,transparent 0,rgba(0,0,0,.55) ${(seam * .42).toFixed(1)}px,#000 ${seam.toFixed(1)}px)` : '';
       screen.current.inert = pan < 1 || !s.active;
       screen.current.setAttribute('aria-hidden', String(pan < 1 || !s.active));
       Object.assign(s, { pan, panWidth: innerWidth, panOffset: pan * innerWidth,
         flowCompensationY: releaseDistance, bridgeEnd });
       const api = window.amyReview;
-      const engineVisible = s.ready && phase.birth > 0 && p < 1;
+      // The engine is visible as soon as the incoming screen shows; Flow hold renders nothing.
+      const storyProgress = engineStory(p, s.layout.ranges);
+      const birth = evaluateNebulosa(storyProgress, s.layout).birth;
+      // Effective values the engine renders (raw progress/birth stay in getState() as before).
+      Object.assign(s, { storyProgress, storyBirth: birth });
+      const engineVisible = s.ready && (pan > .01 || birth > 0) && p < 1;
       const dissolve = s.reduced ? Number(closingProgress > 0) : ease(closingProgress / .17);
-      const fallbackVisible = s.failed && s.active && pan === 1 && phase.birth > 0 && dissolve < 1;
+      const fallbackVisible = s.failed && s.active && pan === 1 && birth > 0 && dissolve < 1;
       const releaseFallbackFocus = !fallbackVisible && fallback.current?.contains(document.activeElement);
       screen.current.dataset.fallback = String(s.failed);
       fallback.current.hidden = !fallbackVisible;
@@ -237,7 +300,7 @@ export default function NebulosaChapter({ startupCoverActive = false, startupFon
       if (s.ready && api) {
         api.setPresentationVisible?.(engineVisible && dissolve < 1 && !startupCover.current);
         // Keep the accepted live scene formed while A takes over its closing pixels.
-        const engineProgress = Math.min(p, s.layout.ranges.hold[1]);
+        const engineProgress = Math.min(storyProgress, s.layout.ranges.hold[1]);
         if (previousEngineProgress !== engineProgress) {
           api.setStoryProgress(engineProgress);
           previousEngineProgress = engineProgress;
@@ -273,16 +336,23 @@ export default function NebulosaChapter({ startupCoverActive = false, startupFon
       const linksActive = s.ready && s.active && pan === 1 && phase.logoGather === 1 && dissolve < 1
         && (closingProgress > 0 ? labelsOpacity > .01 : labelsOpacity >= .99);
       s.socialLinksActive = linksActive;
+      // Each name is inked over the last stretch of its own glyph's formation, in one
+      // continuous move with it, instead of waiting for the scroll's label range. Leaving
+      // (closing or scrolling back) still takes it out.
+      const icons = stats?.icons, leaving = closingProgress > 0 ? labelsOpacity : 1;
       for (const social of SOCIALS) {
-        placeLabel(socialElements.current[social.id], anchors?.[social.id], s.ready ? labelsOpacity : 0, linksActive);
+        const ink = !s.ready ? 0 : icons && !s.reduced ? leaving * ease((icons.glyphs[social.id] - .6) / .4) : labelsOpacity;
+        placeLabel(socialElements.current[social.id], anchors?.[social.id], s.ready ? labelsOpacity : 0, linksActive, ink);
       }
-      if (socialHint.current) socialHint.current.hidden = !linksActive;
+      if (socialHint.current) socialHint.current.hidden = !linksActive || Boolean(icons && !s.reduced && icons.value < 1);
       if (releaseFallbackFocus) {
         const next = linksActive && host.querySelector('a.nebulosa-social[data-link-active="true"]');
         if (next) next.focus({ preventScroll: true });
         else document.activeElement.blur();
       }
-
+      // The same frame loop continues only while the visual pan converges or the
+      // running engine is still forming the glyphs.
+      if (following || (icons && !icons.settled && s.active && previousPause === false)) schedule();
     }
 
     function schedule() { if (!frame && !disposed) frame = requestAnimationFrame(update); }
@@ -308,7 +378,7 @@ export default function NebulosaChapter({ startupCoverActive = false, startupFon
     }
     function goTo(progress) {
       scrollTo({ top: state.current.start + clamp(Number(progress) || 0) * state.current.span, behavior: 'instant' });
-      update();
+      snapPan = true; update();
     }
     function checkEngine() {
       if (disposed) return;
@@ -320,7 +390,10 @@ export default function NebulosaChapter({ startupCoverActive = false, startupFon
         state.current.ready = true;
         state.current.failed = false;
         setSceneFailure(false);
-        api.setStoryProgress(state.current.progress);
+        // Same effective progress that update() feeds the engine: avoids a second render at ready.
+        const readyProgress = Math.min(engineStory(state.current.progress, state.current.layout.ranges), state.current.layout.ranges.hold[1]);
+        api.setStoryProgress(readyProgress);
+        previousEngineProgress = readyProgress;
         setError(recompositionError);
         if (!initialProgressApplied) {
           initialProgressApplied = true;

@@ -124,6 +124,8 @@ body { background: #000; }
 .nebulosa-social[data-link-active='true']:hover > span { color: #e0fff0; }
 .nebulosa-social-status { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); font-size: 9px; line-height: 1.4; font-weight: 400; letter-spacing: .04em; color: #a98a9e; }
 .nebulosa-social-hint { position: absolute; z-index: 3; left: 50%; bottom: 18px; transform: translateX(-50%); max-width: calc(100% - 32px); margin: 0; padding: 6px 10px; border-radius: 20px; background: #000a; color: #ddd5e0; font: 400 12px/1.4 system-ui, sans-serif; letter-spacing: .02em; text-align: center; pointer-events: none; }
+.nebulosa-social-hint:not([hidden]) { animation: nebulosa-hint-in .5s ease both; }
+@keyframes nebulosa-hint-in { from { opacity: 0; } }
 .nebulosa-social-hint strong { color: #bde8d4; font-weight: 500; }
 .nebulosa-hint-touch { display: none; }
 .nebulosa-social--kick { color: #a7c59a; }

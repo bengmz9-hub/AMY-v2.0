@@ -2,6 +2,7 @@ import {appendHairDust} from './portrait-hair-dust.js';
 import {cloudMappingGLSL} from './particle-dynamics.js';
 import {createPortraitPointField, portraitPointFieldGLSL} from './portrait-point-field.js';
 import {createAbyssalPhotoBridge, createAbyssalOverflowBridge, abyssalPhotoBridgeGLSL} from './abyssal-photo-bridge.js';
+import {solarFlashGLSL} from './solar-flash.js';
 
 const vertex = `
 attribute vec4 aMotion, aCloud;
@@ -19,6 +20,7 @@ varying float vBridgeAlpha, vBridgeMix, vBridgeHandoff;
 ${cloudMappingGLSL}
 ${portraitPointFieldGLSL}
 ${abyssalPhotoBridgeGLSL}
+${solarFlashGLSL}
 float contourHash(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
   p += dot(p, p + 45.32);
@@ -30,6 +32,25 @@ float contourNoise(vec2 p) {
   return mix(mix(contourHash(cell), contourHash(cell + vec2(1.0, 0.0)), b.x),
     mix(contourHash(cell + vec2(0.0, 1.0)), contourHash(cell + 1.0), b.x), b.y);
 }
+// Fusion transit: staggered arc and swirl around the nexus, settling exactly on its endpoints.
+vec3 fusionTransit(vec3 from, vec3 to, vec2 nexusXY, float m, float seed, float clock) {
+  if (m <= 0.0) return from;
+  if (m >= 1.0) return to;
+  float transit = sin(m * 3.14159265);
+  vec3 p = mix(from, to, m);
+  vec2 pivot = mix(nexusXY, to.xy, .65);
+  float swirl = (.74 + .34 * seed) * transit * (1.0 - .32 * m);
+  vec2 offset = p.xy - pivot;
+  p.xy = pivot + mat2(cos(swirl), -sin(swirl), sin(swirl), cos(swirl)) * offset;
+  float ang = seed * 6.2831853;
+  vec3 arc = vec3(cos(ang * 1.7), sin(ang * 2.3), sin(ang) * .6 + .4);
+  p += arc * vec3(.055, .048, .18) * transit * (1.0 - .45 * m);
+  float decay = (1.0 - m) * transit;
+  vec3 q = p * 2.1 + vec3(0.0, 0.0, clock * .24);
+  vec3 turb = vec3(abBridgeNoise(q), abBridgeNoise(q + 31.7), sin(q.x * 2.4 + q.y * 1.9));
+  p += turb * .085 * decay;
+  return p;
+}
 void main() {
   float seed = aMotion.z, hair = aMotion.w, phase = seed * 6.2831853;
   // Source-locked protection follows this photograph's tilted face.
@@ -38,9 +59,12 @@ void main() {
   float protectedFace = 1.0 - smoothstep(1.0, 1.18, faceRadius);
   float hairPeriphery = hair * (1.0 - protectedFace) * (1.0 - aHairDust);
   float grain = fract(seed * 17.13 + .61);
+  // Arrival order: grain first, then distance from the protected face.
+  float fusionOrder = clamp(grain * .68 + clamp(faceRadius * .42, 0.0, 1.0) * .32, 0.0, 1.0);
   vec3 target = position;
   vBridgeColor = vec3(0.0); vBridgeAlpha = 0.0; vBridgeMix = 0.0; vBridgeHandoff = 1.0;
   float introFormed = 1.0;
+  float photoGather = uStoryReduced > .5 ? uStoryGather : solarPortraitGather(uStoryGather, fusionOrder);
   float formed = 1.0, visibility = 1.0;
   vec3 p = target;
   // Independent seed motion, no rigid facets or normal-dependent lighting.
@@ -55,12 +79,9 @@ void main() {
     if (uStoryReduced > .5) {
       visibility *= uStoryGather * (1.0 - uStoryRelease);
     } else {
-      // A spatial wave reveals the facial core before its orbiting periphery.
-      // Stable seeds soften the front without changing grain correspondence.
-      float revealRadius = clamp((faceRadius - .12) / 1.75, 0.0, 1.0);
-      float entryStagger = mix(revealRadius * .36, .38, hairPeriphery) + seed * .06;
+      // One shared deformation: no facial/peripheral assembly queue.
       float exitStagger = fract(seed * 7.13 + .17) * .18;
-      float gather = smoothstep(entryStagger, mix(.42, .56, 1.0 - protectedFace) + entryStagger, uStoryGather);
+      float gather = photoGather;
       introFormed = gather;
       float disperse = smoothstep(exitStagger, .82 + exitStagger, uStoryRelease);
       formed = gather * (1.0 - disperse);
@@ -81,7 +102,8 @@ void main() {
       visibility *= mix(.24, 1.0, formed);
       // The yellow source field hands its light to the existing photo morph.
       // No second copper/blue cloud is drawn over the initial Abyssal scene.
-      visibility *= smoothstep(0.0, .35, uStoryGather);
+      // Grains that already arrived stay visible while the field hands over.
+      visibility *= max(smoothstep(0.0, .35, uStoryGather), formed);
     }
   }
   p += drift * formed;
@@ -89,33 +111,45 @@ void main() {
   p.xy += hairJitter * 0.065 * hairPeriphery * formed;
   vec3 world = (modelMatrix * vec4(p, 1.0)).xyz;
   bool bridgeActive = uStoryActive > .5 && uStoryReduced < .5
-    && uStoryGather < 1.0 && uStoryRelease <= 0.0 && introFormed < 1.0;
+    && uStoryGather < 1.0 && uStoryRelease <= 0.0
+    && (introFormed < 1.0 || uStoryGather < .53); // arrived grains keep the pulse only while the flash lasts
   float bridgeSize = 0.0;
+  float fusionPointScale = 1.0;
+  vec3 fusionPointBoost = vec3(0.0);
   if (bridgeActive) {
     AbyssalBridgeSample source = sampleAbyssalBridge();
     vec3 endpoint = target + drift;
     endpoint.xy += hairJitter * .065 * hairPeriphery;
     vec3 destination = (modelMatrix * vec4(endpoint, 1.0)).xyz;
-    world = nebulaTransit(source.world, destination, introFormed, seed, 1.0);
-    // Solar orbit: retain each grain's correspondence and both exact endpoints.
-    // Differential rotation and depth peak only while the portrait is forming.
-    if (introFormed > 0.0 && introFormed < 1.0) {
-      float crest = sin(introFormed * 3.14159265);
-      // Let the face become legible while the outer grains keep their orbit.
-      float orbit = 1.0 - protectedFace * smoothstep(.12, .58, uStoryGather) * .95;
-      float angle = crest * 2.35 * (.35 + seed * .65) * orbit;
-      world.xy = mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * world.xy;
-      world.xy *= 1.0 - crest * .16 * orbit;
-      world.z += sin(seed * 6.2831853 + introFormed * 4.0) * crest * .80 * orbit;
-    }
-    vBridgeColor = source.color;
-    // A restrained travelling light crest marks assembly away from the face.
-    float lightCrest = pow(sin(introFormed * 3.14159265), 4.0);
-    vBridgeColor *= 1.0 + lightCrest * .30 * (1.0 - protectedFace * .80);
-    vBridgeAlpha = source.alpha;
-    vBridgeMix = 1.0 - introFormed;
+    // The same source grains spiral into a shared nexus and travel in staggered
+    // arcs; their speed lights them and a slight pulse marks the fusion.
+    float flare = solarFlashAmount(uStoryGather);
+    vec3 nexus = (modelMatrix * vec4(.08 * uPortraitAspect, -.06, 0.0, 1.0)).xyz;
+    vec3 rel = source.world - nexus;
+    float rad = length(rel.xy);
+    float inflow = smoothstep(.02, .34, uStoryGather);
+    float pull = inflow * mix(.30, .50, smoothstep(.35, 2.6, rad));
+    float preSpin = inflow * .46 / (.55 + rad * .85);
+    vec3 startPos = nexus + rel * (1.0 - pull);
+    startPos.xy = nexus.xy + mat2(cos(preSpin), -sin(preSpin), sin(preSpin), cos(preSpin)) * (startPos.xy - nexus.xy);
+    world = fusionTransit(startPos, destination, nexus.xy, introFormed, seed, uMotionTime);
+    float transit = sin(introFormed * 3.14159265);
+    float travelDist = clamp(length(destination.xy - startPos.xy) * .62, .25, 1.25);
+    float vel = transit * travelDist;
+    float shapedM = introFormed * sqrt(max(introFormed, 0.0));
+    float fusePulse = sin(shapedM * 3.14159265) * flare;
+    vec3 fusionLight = mix(vec3(.84, .58, .64), vec3(1.0, .94, .90), .68);
+    float bridgeGlow = vel * .28 + fusePulse * .30;
+    vBridgeColor = mix(source.color, fusionLight * max(length(source.color), .28),
+      clamp(bridgeGlow * .65, 0.0, .70)) * (1.0 + bridgeGlow * .42);
+    fusionPointScale = 1.0 + vel * .18 + fusePulse * .22;
+    fusionPointBoost = fusionLight * (vel * .028 + fusePulse * .042);
+    float overlapGuard = inflow * (1.0 - introFormed);
+    float invM = 1.0 - introFormed;
+    vBridgeAlpha = source.alpha * mix(1.0, .58, overlapGuard);
+    vBridgeMix = invM * invM;
     vBridgeHandoff = uAbHandoff;
-    bridgeSize = source.pointSize;
+    bridgeSize = source.pointSize * mix(1.0, .82, overlapGuard) * (1.0 + vel * .08);
   }
   // Apply the exact nebula force to current rendered positions AFTER photo scale.
   if (bridgeActive) world = mix(world, applyPortraitPointField(world, seed), introFormed);
@@ -137,7 +171,7 @@ void main() {
   vec3 cloudTint = nebulaDustColor(seed, aCloud.x * 1.35 + aCloud.z * .42);
   vPointColor = mix(cloudTint * (.25 + seed * 1.9), photo, formed);
   vPointColor *= mix(nebulaBirthGlow(uStoryBirth, uStoryReduced), 1.0, formed);
-  if (bridgeActive) vPointColor = photo;
+  if (bridgeActive) vPointColor = photo * fusionPointScale + fusionPointBoost;
 
   float noise = .65 * contourNoise(uv * vec2(8.0, 10.0) + vec2(1.7, 8.2))
     + .35 * contourNoise(uv * vec2(19.0, 23.0) + vec2(13.4, 2.8));

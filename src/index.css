@@ -18,7 +18,7 @@
   box-sizing: border-box;
 }
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   scroll-padding-top: 90px;
   font-size: 16px;
 }
@@ -29,7 +29,7 @@ body {
   line-height: 1.6;
   overflow-x: hidden;
   transition: background 0.4s ease;
-  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23ff71ce" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg>') 12 12, crosshair;
+  cursor: default;
 }
 a, button, .filter-btn {
   cursor: pointer;

@@ -10,7 +10,8 @@ export function mountAbyssalCursor({root = document.body} = {}) {
   for (const element of [dot, ring]) {element.setAttribute('aria-hidden', 'true');element.hidden = true;root.appendChild(element);}
   let disposed = false, visible = false, hot = false, frame = 0;
   let x = 0, y = 0, ringX = 0, ringY = 0, lastTime = 0;
-  const enabled = () => fine.matches && !reduced.matches && !doc.hidden;
+  const nativeSurface = () => Boolean(root.querySelector('.startup-cover:not(.startup-cover--leaving), .jj-navbar.menu-is-open'));
+  const enabled = () => fine.matches && !reduced.matches && !doc.hidden && !nativeSurface();
   function restoreNative() {
     if (previous === null) root.removeAttribute(attribute); else root.setAttribute(attribute, previous);
   }

@@ -520,9 +520,10 @@ try {
     check('Open menu preserves document offset',Math.abs(menuAfter-menuBefore)<=2,{menuBefore,menuAfter});
   });
 
-  await scenario('reduced-motion-guard', { reducedMotion: 'reduce' }, async page => {
+  // User decision (15-nov-2026): reduced motion is ignored, so the pulse applies as usual.
+  await scenario('reduced-motion-ignored', { reducedMotion: 'reduce' }, async page => {
     await page.goto(`${baseURL}?scroll=continuous#amy-home`);
-    await page.waitForFunction(() => document.querySelector('.amy-hero')?.dataset.static === 'true' && window.nebulosaPreview?.getState());
+    await page.waitForFunction(() => document.querySelector('.amy-hero')?.dataset.static === 'false' && window.nebulosaPreview?.getState());
     const yStartReduced = await settle(page);
     await installWheelRecorder(page);
     await page.mouse.move(8, 40);
@@ -530,7 +531,7 @@ try {
     await page.mouse.wheel(0, 120);
     const yAfterReduced = await waitForWheelSettle(page, 240);
     const reducedDelta = yAfterReduced - yStartReduced;
-    check('prefers-reduced-motion: reduce skips wheel pulse boost and keeps native 120px travel', Math.abs(reducedDelta - 120) <= 3, {
+    check('prefers-reduced-motion: reduce is ignored and the wheel pulse still travels 360px', Math.abs(reducedDelta - 360) <= 3, {
       yStartReduced,
       yAfterReduced,
       reducedDelta,

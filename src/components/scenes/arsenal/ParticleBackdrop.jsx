@@ -15,6 +15,7 @@ export default function ParticleBackdrop({ mode = 'c', paused, onPreference, pre
   useEffect(() => {
     const canvas = canvasRef.current;
     const scope = canvas.closest('.agent-arsenal') || document;
+    const portal = canvas.closest('.grow-portal-frame');
     const state = { mode, frames: 0, particles: 0, active: false, reduced: false, paused: pausedRef.current, error: null };
     canvas.__backgroundState = state;
     canvas.dataset.bgReady = 'false';
@@ -29,15 +30,17 @@ export default function ParticleBackdrop({ mode = 'c', paused, onPreference, pre
     let reduced = media.matches;
     let manualPause = pausedRef.current;
     let disposed = false, inView = true, failed = false, maskDirty = true;
-    let frame = 0, previous = 0, time = 0, width = 1, height = 1, dpr = 1;
+    let frame = 0, zoneFrame = 0, previous = 0, time = 0, width = 1, height = 1, dpr = 1;
     let preparationReported = false;
     const pointer = { x: 0, y: 0, active: false };
     const desired = { x: 0, y: 0, active: false };
 
+    function portalHidden() { return portal?.dataset.visible === 'false'; }
     function canRun() { return !disposed && !failed && !manualPause && !reduced && inView && !document.hidden; }
     function stop() {
       if (frame) cancelAnimationFrame(frame);
-      frame = 0; previous = 0; state.active = false;
+      if (zoneFrame) cancelAnimationFrame(zoneFrame);
+      frame = 0; zoneFrame = 0; previous = 0; state.active = false;
     }
     function updateMask() {
       maskDirty = false;
@@ -116,7 +119,14 @@ export default function ParticleBackdrop({ mode = 'c', paused, onPreference, pre
       state.width = width; state.height = height; state.dpr = dpr;
       maskDirty = true; paintAndRun();
     }
-    function zonesChanged() { maskDirty = true; if (!canRun()) draw(); }
+    function zonesChanged() {
+      maskDirty = true;
+      if (canRun() || manualPause || disposed || failed || !inView || document.hidden || portalHidden() || zoneFrame) return;
+      zoneFrame = requestAnimationFrame(() => {
+        zoneFrame = 0;
+        if (!canRun() && !manualPause && !portalHidden()) draw();
+      });
+    }
     function move(event) {
       if (event.pointerType === 'touch' || manualPause || reduced) return;
       desired.x = Math.max(-1, Math.min(1, event.clientX / width * 2 - 1));
@@ -135,10 +145,11 @@ export default function ParticleBackdrop({ mode = 'c', paused, onPreference, pre
     const observer = new ResizeObserver(zonesChanged);
     for (const element of scope.querySelectorAll('.proposal-layout,.lab-title,.agent-intro__copy,[data-role-icon]')) observer.observe(element);
     const sceneElement = scope.querySelector('.proposal-layout');
+    const scroller = scope.querySelector('.grow-layout');
     const intersection = new IntersectionObserver(entries => { inView = entries[0]?.isIntersecting ?? true; state.inView = inView; if (inView) { maskDirty = true; paintAndRun(); } else stop(); });
     if (sceneElement) intersection.observe(sceneElement);
     window.addEventListener('resize', resize, { passive: true });
-    window.addEventListener('scroll', zonesChanged, { passive: true, capture: true });
+    scroller?.addEventListener('scroll', zonesChanged, { passive: true });
     if (mode !== 'c') {
       window.addEventListener('pointermove', move, { passive: true });
       document.documentElement.addEventListener('pointerleave', leave, { passive: true });
@@ -152,7 +163,7 @@ export default function ParticleBackdrop({ mode = 'c', paused, onPreference, pre
       disposed = true; stop(); engineRef.current = null;
       observer.disconnect(); intersection.disconnect();
       window.removeEventListener('resize', resize);
-      window.removeEventListener('scroll', zonesChanged, true);
+      scroller?.removeEventListener('scroll', zonesChanged);
       if (mode !== 'c') {
         window.removeEventListener('pointermove', move);
         document.documentElement.removeEventListener('pointerleave', leave);

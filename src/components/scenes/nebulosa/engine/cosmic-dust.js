@@ -73,8 +73,9 @@ export function createCosmicDust({THREE,scene,renderer}){
  let width=1,height=1,opacity=0;
  return {points,
   resize(w,h){width=w;height=h;const count=w<=700?5200:14500;if(!cache.has(count))cache.set(count,makeGeometry(THREE,count));points.geometry=cache.get(count);uniforms.uView.value.set(w,h);uniforms.uMobile.value=w<=700?1:0;uniforms.uDpr.value=renderer.getPixelRatio();},
-  update({phase,time,mode,reduced,pointer,pointerStrength=0,paused=false}){
-   opacity=phase.active&&mode==='portrait'?phase.birth*phase.logoGather*(1-phase.outflow):0;uniforms.uOpacity.value=opacity;points.visible=opacity>0;
+  // formation: how far the social glyphs have formed; the field arrives with them.
+  update({phase,time,mode,reduced,pointer,pointerStrength=0,paused=false,formation=phase.logoGather}){
+   opacity=phase.active&&mode==='portrait'?phase.birth*formation*(1-phase.outflow):0;uniforms.uOpacity.value=opacity;points.visible=opacity>0;
    uniforms.uTime.value=reduced?0:time;
    if(reduced||paused||pointerStrength<=0)uniforms.uParallax.value.set(0,0);
    else{uniforms.uParallax.value.x+=((pointer.x*2-1)*pointerStrength-uniforms.uParallax.value.x)*.06;uniforms.uParallax.value.y+=((1-pointer.y*2)*pointerStrength-uniforms.uParallax.value.y)*.06;}

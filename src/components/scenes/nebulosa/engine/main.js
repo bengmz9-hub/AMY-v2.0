@@ -9,6 +9,7 @@ import { addPortraitGrainUV, attachPortraitSoftness } from './portrait-softness.
 import { portraitScaleForWidth } from './social-layout.js';
 import { createPortraitPoints } from './portrait-points.js';
 import { waitForGpu } from './wait-for-gpu.js';
+import { solarFlashAmount, solarPortraitGather, solarCollapseAmount, solarYellowRetention } from './solar-flash.js';
 
 const ASSETS = {
   metaUrl: new URL('./assets/depth.json?no-inline', import.meta.url).href,
@@ -215,6 +216,10 @@ class PortraitPostProcessor {
         uDesaturate: { value: DEFAULTS.desaturation },
         uExposure: { value: DEFAULTS.exposure },
         uYellowMix: { value: 0 },
+        uSolarFlash: { value: 0 },
+        uSolarAspect: { value: 1 },
+        uSolarCenter: { value: new THREE.Vector2(0.5, 0.5) },
+        uSolarScale: { value: 1 },
         uMouse: { value: new THREE.Vector2(0.5, 0.5) },
         uTime: { value: 0.0 },
         uReliefMode: { value: 0.0 }
@@ -235,6 +240,10 @@ class PortraitPostProcessor {
         uniform float uDesaturate;
         uniform float uExposure;
         uniform float uYellowMix;
+        uniform float uSolarFlash;
+        uniform float uSolarAspect;
+        uniform vec2 uSolarCenter;
+        uniform float uSolarScale;
         uniform vec2 uMouse;
         uniform float uTime;
         uniform float uReliefMode;
@@ -282,6 +291,13 @@ class PortraitPostProcessor {
           vec3 bloom = (b1 * 0.36 + b2 * 0.41) * uBloomStrength;
 
           vec3 hdr = base + bloom;
+          // Fusion: a compact, translucent soft kiss at the portrait's fusion nexus; no halo, no ring.
+          if (uSolarFlash > 0.0) {
+            vec2 fusionUV = (uv - uSolarCenter) * vec2(uSolarAspect, 1.0) / max(uSolarScale, .55);
+            float fusionR2 = dot(fusionUV, fusionUV);
+            float softCore = exp(-fusionR2 * 195.0) * uSolarFlash;
+            hdr += mix(vec3(.82, .56, .64), vec3(1.0, .93, .89), .72) * softCore * .45;
+          }
           vec3 mapped = acesFilm(hdr * 0.96 * uExposure);
           if (uYellowMix > 0.0) mapped = mix(mapped, yellowACES(hdr), uYellowMix);
 
@@ -369,6 +385,13 @@ class PortraitPostProcessor {
     this.compositeMat.uniforms.tBloom2.value = this.blurV2.texture;
     this.compositeMat.uniforms.uMouse.value.copy(opts.mouseUV);
     this.compositeMat.uniforms.uTime.value = opts.time;
+    this.compositeMat.uniforms.uSolarFlash.value = opts.solarFlash || 0;
+    this.compositeMat.uniforms.uSolarAspect.value = this.width / this.height;
+    this.compositeMat.uniforms.uSolarCenter.value.set(
+      Number.isFinite(opts.solarCenterX) ? opts.solarCenterX : 0.5,
+      Number.isFinite(opts.solarCenterY) ? opts.solarCenterY : 0.5
+    );
+    this.compositeMat.uniforms.uSolarScale.value = Number.isFinite(opts.solarScale) ? opts.solarScale : 1;
     this.compositeMat.uniforms.uReliefMode.value = opts.mode === 'relief' ? 1.0 : 0.0;
 
     r.setRenderTarget(null);
@@ -520,12 +543,14 @@ function updateMotionButton() {
 
 function initThree() {
   try {
+    const preserveDrawingBuffer = new URLSearchParams(window.location.search).has('preserveDrawingBuffer') ||
+      window.__AMY_PRESERVE_DRAWING_BUFFER__ === true;
     renderer = new THREE.WebGLRenderer({
       canvas: dom.canvas,
       antialias: true,
       powerPreference: 'high-performance',
       alpha: false,
-      preserveDrawingBuffer: true
+      preserveDrawingBuffer
     });
   } catch (err) {
     state.error = `WebGL no disponible: ${err.message || err}`;
@@ -1581,14 +1606,29 @@ function syncAnimationLoop() {
   }
 }
 
+const INTERACTION_WAKE_SECONDS = .5;
+// While AMY gathers (her grains fly over amyGather .06-.60) the final living motion grows
+// with her, so the formed portrait is already the definitive scene instead of resting
+// still and then starting to sway when the scroll reaches labelsIn.
+const AMY_WAKE_FROM = .14, AMY_WAKE_TO = .60;
+const CLOSING_PHASES = new Set(['labelsOut', 'logosOut', 'amyOut', 'outflow']);
+let interactionShown = 0;
 function renderFrameSync(dt = 0.016) {
   if (!renderer || !scene || !camera || !postProcessor) return;
 
   const phase = getStoryStats();
-  const storyInteraction = state.storyProgress === null || state.mode !== 'portrait' ? 1 : phase.interaction;
-  const fieldInteraction = state.storyProgress === null ? 1 : phase.birth * (1 - phase.outflow);
   const automaticMotion = !state.frozen && state.mode === 'portrait'
     && !state.reducedMotion && !state.motionPaused;
+  // The portrait wakes gently: a fast scroll through the label range cannot switch its
+  // sway on within a few frames. Controlled frames and any decrease take the value directly.
+  const scrollInteraction = state.storyProgress === null || state.mode !== 'portrait' ? 1 : phase.interaction;
+  const amyWake = automaticMotion && !CLOSING_PHASES.has(phase.phase)
+    ? Math.max(0, Math.min(1, (phase.amyGather - AMY_WAKE_FROM) / (AMY_WAKE_TO - AMY_WAKE_FROM))) : 0;
+  const interactionTarget = Math.max(scrollInteraction, amyWake);
+  interactionShown = automaticMotion && interactionTarget > interactionShown
+    ? Math.min(interactionTarget, interactionShown + dt / INTERACTION_WAKE_SECONDS) : interactionTarget;
+  const storyInteraction = interactionShown;
+  const fieldInteraction = state.storyProgress === null ? 1 : phase.birth * (1 - phase.outflow);
   if (automaticMotion) {
     state.time += dt;
     state.assembly = state.storyProgress === null ? smoothstep(0, 1.6, state.time) : 1;
@@ -1645,12 +1685,13 @@ function renderFrameSync(dt = 0.016) {
     strength: particlePointerStrength,
     enabled: state.mode === 'portrait' && (!state.frozen || state.motionReview),
     reduced: state.reducedMotion, paused: state.motionPaused});
-  platforms?.update({ phase, time: state.time, mode: state.mode, reduced: state.reducedMotion,
+  platforms?.update({ phase, time: state.time, mode: state.mode, reduced: state.reducedMotion, animated: automaticMotion,
     pointer: state.mouseUV, pointerStrength: particlePointerStrength * storyInteraction,
     hoverActive: state.pointerActive && state.pointerType === 'mouse',
     paused: state.motionPaused, pixelRatio: renderer.getPixelRatio() });
-  deepSpace?.update({ phase, time: state.time, mode: state.mode, reduced: state.reducedMotion,
-    pointer: state.mouseUV, pointerStrength: state.pointerStrength, paused: state.motionPaused });
+  deepSpace?.update({ phase, time: state.time, mode: state.mode, reduced: state.reducedMotion, animated: automaticMotion,
+    pointer: state.mouseUV, pointerStrength: state.pointerStrength, paused: state.motionPaused,
+    formation: platforms ? platforms.entranceValue() : phase.logoGather });
   if (!state.presentationVisible) {
     state.renderCalls = 0;
     syncAnimationLoop();
@@ -1661,15 +1702,35 @@ function renderFrameSync(dt = 0.016) {
   postFrameOptions.rippleStrength = 0;
   postFrameOptions.time = state.time;
   postFrameOptions.mode = state.mode;
-  const yellowMix = deepSpace?.stats().yellow?.postMix || 0;
+  const solarActive = state.storyProgress !== null && state.mode === 'portrait'
+    && !state.reducedMotion && phase.amyRelease === 0;
+  // The yellow source field hands its light to the fusing grains.
+  const rawYellowMix = deepSpace?.stats().yellow?.postMix || 0;
+  const yellowMix = solarActive ? rawYellowMix * solarYellowRetention(phase.amyGather) : rawYellowMix;
+  const solarFlash = solarActive ? solarFlashAmount(phase.amyGather) : 0;
+  // Fusion nexus in screen UV, anchored to the portrait as it is laid out.
+  const assetAspect = state.assetDimensions
+    ? state.assetDimensions.width / Math.max(1, state.assetDimensions.height) : 1;
+  const pScale = motionUniforms.uPortraitScale.value || 1;
+  const halfW = Math.max(0.001, (camera.right - camera.left) * 0.5);
+  const halfH = Math.max(0.001, (camera.top - camera.bottom) * 0.5);
+  const groupX = portraitGroup ? portraitGroup.position.x : portraitBaseX;
+  const groupY = portraitGroup ? portraitGroup.position.y : portraitBaseY;
   postFrameOptions.yellowMix = yellowMix;
-  postFrameOptions.bloomSpread = 1 + 3 * yellowMix;
-  if (yellowMix > 0) {
+  postFrameOptions.solarFlash = solarFlash;
+  postFrameOptions.solarCharge = 0;
+  postFrameOptions.solarCollapse = solarActive ? solarCollapseAmount(phase.amyGather) : 0;
+  postFrameOptions.solarBurst = 0;
+  postFrameOptions.solarCenterX = 0.5 + (groupX + (.54 - 0.5) * 2 * assetAspect * pScale) / (2 * halfW);
+  postFrameOptions.solarCenterY = 0.5 + (groupY + (.47 - 0.5) * 2 * pScale) / (2 * halfH);
+  postFrameOptions.solarScale = pScale / (halfH / 1.08);
+  postFrameOptions.bloomSpread = Math.min(4, 1 + 3 * yellowMix + solarFlash * .06);
+  if (yellowMix > 0 || solarFlash > 0) {
     const high = postProcessor.highPassMat.uniforms, composite = postProcessor.compositeMat.uniforms;
     const saved = [high.uThreshold.value, high.uSmooth.value, composite.uBloomStrength.value];
-    high.uThreshold.value = mix(saved[0], .06, yellowMix);
+    high.uThreshold.value = mix(saved[0], .06, yellowMix) * (1 - solarFlash * .03);
     high.uSmooth.value = mix(saved[1], .45, yellowMix);
-    composite.uBloomStrength.value = mix(saved[2], 1.5, yellowMix);
+    composite.uBloomStrength.value = mix(saved[2], 1.5, yellowMix) + solarFlash * .05;
     composite.uYellowMix.value = yellowMix;
     try { postProcessor.render(scene, camera, postFrameOptions); }
     finally {
@@ -1896,8 +1957,14 @@ window.amyReview = {
       renderCalls: state.renderCalls,
       fps: state.fps,
       story: getStoryStats(),
+      icons: platforms?.entranceStats() ?? null,
       nebula: deepSpace?.stats(),
       yellowPost: { mix: postFrameOptions.yellowMix || 0, bloomSpread: postFrameOptions.bloomSpread || 1,
+        solarFlash: postFrameOptions.solarFlash || 0,
+        solarCharge: postFrameOptions.solarCharge || 0,
+        solarCollapse: postFrameOptions.solarCollapse || 0,
+        solarBurst: postFrameOptions.solarBurst || 0,
+        portraitGather: state.reducedMotion ? getStoryStats().amyGather : solarPortraitGather(getStoryStats().amyGather),
         fieldThreshold: .06, fieldSmoothing: .45, fieldBloom: 1.5, toneMapping: 'phase-gated ACES filmic' },
       repulsion: state.mode === 'portrait' ? portraitPoints?.field.stats() : portraitRepulsion.stats(),
       points: portraitPoints?.stats(),

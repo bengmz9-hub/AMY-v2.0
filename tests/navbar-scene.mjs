@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
 import { mkdir, writeFile } from 'node:fs/promises';
-const base=process.env.AMY_NAVBAR_URL||'http://127.0.0.1:4173/AMY-v2.0/';
-const output=process.env.AMY_NAVBAR_OUTPUT||'test-results/navbar-scene';
+const base=process.env.AMY_NAVBAR_URL||'http://127.0.0.1:4191/AMY-v2.0/';
+const output=process.env.AMY_NAVBAR_OUTPUT||'.audit/navbar-helix-20261108/native-final';
 await mkdir(output,{recursive:true});
 const browser=await chromium.launch({channel:'chrome',headless:true});
 const report={url:base,browser:browser.version(),checks:[],cases:[],errors:[]};

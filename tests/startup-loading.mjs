@@ -256,12 +256,13 @@ try {
     await entered(page);
     check('autoplay rejection uses existing pause state', await page.locator('.amy-hero').getAttribute('data-paused') === 'true');
   });
-  await scenario('mobile reduced motion prepares complete video without playing it', async page => {
+  // User decision (15-nov-2026): reduced motion is ignored; the gameplay video always plays.
+  await scenario('mobile reduced-motion preference still plays the video', async page => {
     await start(page);
     await entered(page);
-    check('reduced motion has static hero and no horizontal overflow', await page.evaluate(() => document.querySelector('.amy-hero').dataset.static === 'true' && document.documentElement.scrollWidth <= innerWidth));
+    check('reduced-motion preference keeps the animated hero and no horizontal overflow', await page.evaluate(() => document.querySelector('.amy-hero').dataset.static === 'false' && document.documentElement.scrollWidth <= innerWidth));
     await completeVideo(page, 'valorant-gameplay-720p-av1.webm');
-    check('reduced video stays paused until explicitly requested', await page.locator('video.amy-lens-video').evaluate(v => v.paused && v.currentTime === 0));
+    check('video plays despite the reduced-motion preference', await page.waitForFunction(() => { const v = document.querySelector('video.amy-lens-video'); return !v.paused && v.currentTime > 0; }, null, { timeout: 8000 }).then(() => true, () => false));
     await capture(page, 'mobile-reduced-entered');
   }, { viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', isMobile: true, hasTouch: true });
   await scenario('motion preference changes while video is pending', async page => {

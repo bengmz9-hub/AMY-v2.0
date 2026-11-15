@@ -98,11 +98,27 @@ async function settle(page) {
   throw Error('Document scroll did not settle.');
 }
 
+// The Flow -> Nebulosa pan follows the scroll with a damped, Hero-wipe-like response.
+// Its visual state reaches the native stop only once that pan has converged.
+async function panSettled(page) {
+  await page.waitForFunction(() => {
+    const s = window.nebulosaPreview?.getState();
+    return !s || s.pan === (s.reduced ? Number(s.flowExit >= 1) : s.flowExit);
+  }, null, { timeout: 5000 });
+}
+
 async function wheelTo(page, readRemaining, predicate, maxSteps = 90, intervalMs = 24) {
   const samples = [];
   for (let step = 0; step < maxSteps; step++) {
     if (await page.evaluate(predicate)) return samples;
-    const remaining = await page.evaluate(readRemaining);
+    let remaining = await page.evaluate(readRemaining);
+    // Already within the smallest wheel step of the stop: judge it after the pan
+    // converges instead of nudging a page that is already in place.
+    if (Math.abs(remaining) < 16) {
+      await panSettled(page);
+      if (await page.evaluate(predicate)) return samples;
+      remaining = await page.evaluate(readRemaining);
+    }
     const absRemaining = Math.abs(remaining);
     const stepSize = absRemaining >= 245
       ? Math.min(300, Math.round(absRemaining))
@@ -578,16 +594,11 @@ try {
     await endpoint(page, false);
   });
 
-  await scenario('reduced-motion-continuous-scroll', { reducedMotion: 'reduce' }, async page => {
+  // User decision (15-nov-2026): the site ignores prefers-reduced-motion (vite.config.js).
+  await scenario('reduced-motion-preference-ignored', { reducedMotion: 'reduce' }, async page => {
     await page.goto(`${baseURL}?scroll=continuous#amy-home`);
-    await page.waitForFunction(() => document.querySelector('.amy-hero')?.dataset.static === 'true' && window.nebulosaPreview?.getState());
-    await settle(page);
-    await page.mouse.move(8, 450);
-    await page.mouse.wheel(0, 90);
-    const y1 = await settle(page);
-    await delay(250);
-    const y2 = await page.evaluate(() => scrollY);
-    check('Reduced motion retains native proportional wheel scroll without auto-travel', Math.abs(y1 - 90) <= 2 && Math.abs(y2 - y1) <= 1, { y1, y2 });
+    await page.waitForFunction(() => document.querySelector('.amy-hero')?.dataset.static === 'false' && window.nebulosaPreview?.getState());
+    check('Reduced-motion preference keeps the animated hero', await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches && document.querySelector('.amy-hero').dataset.static === 'false'));
     await menu(page, '#gear');
     await endpoint(page);
   });

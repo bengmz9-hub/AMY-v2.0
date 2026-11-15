@@ -431,9 +431,9 @@ export function createAbyssalYellow({THREE,scene,camera,renderer}) {
       birth=clamp(phase.birth);gather=Math.max(clamp(phase.amyGather),clamp(phase.amyForm));
       // Root keeps the existing static photo dissolve under reduced motion.
       // With no spatial bridge draw, retain the source across the whole gather.
-      const handoff=reduced?gather:smoothRange(0,.18,gather),outflow=1-clamp(phase.outflow);
+      const handoff=reduced?gather:smoothRange(0,.06,gather),outflow=1-clamp(phase.outflow);
       const fade=(1-handoff)*outflow;
-      const streamFade=(1-smoothRange(.18,.75,gather))*outflow;
+      const streamFade=(1-smoothRange(reduced ? .18 : .05,reduced ? .75 : .22,gather))*outflow;
       const active=Boolean(phase.active)&&mode==='portrait';
       opacity=active?birth*fade:0;
       streamOpacity=active?birth*streamFade:0;

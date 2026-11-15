@@ -17,6 +17,12 @@ const DEFINITIONS = SOCIALS.map(({id}) => {
   if (!GLYPHS[id]) throw new Error('Social particle glyph missing: ' + id);
   return {id, ...GLYPHS[id]};
 });
+// The glyphs form almost together with AMY, a beat behind her. Measured on one wheel
+// step (1440x900, three runs): her grains fly from amyGather .06 to .60 in ~667 ms.
+// The glyphs' target spans amyGather .14-.72, i.e. ~120 ms after her at both ends, and
+// is then followed in time, so no scroll speed can play them faster than she forms.
+// GLYPH_SPAN leaves ~24 ms between consecutive glyphs.
+const ENTRANCE_FROM=.14,ENTRANCE_TO=.72,ENTRANCE_SECONDS=.67,EXIT_SECONDS=.5,GLYPH_SPAN=.82;
 function random(seed) { let n = seed >>> 0; return () => { n ^= n << 13; n ^= n >>> 17; n ^= n << 5; return (n >>> 0) / 4294967296; }; }
 
 const vertexShader = `
@@ -28,13 +34,15 @@ uniform float uSize,uTime,uGather,uRelease,uBirth,uOutflow,uReduced,uInteraction
 uniform float uGrainScale,uTilt;
 uniform vec2 uNebulaAxis;
 uniform float uCloudScale;
-varying float vSeed,vVisibility,vFormation,vEnergy;
+varying float vSeed,vVisibility,vFormation,vEnergy,vGlow;
 varying vec3 vDust;
 ${cloudMappingGLSL}
 ${portraitPointFieldGLSL}
 void main(){
  float seed=aMotion.z, phase=seed*6.2831853;
- float gather=smoothstep(seed*.22,.78+seed*.22,uGather);
+ // Arrival order as in AMY's fusion: grain first, then distance from the glyph's core.
+ float order=clamp(seed*.68+clamp(length(aMotion.xy)*1.5,0.0,1.0)*.32,0.0,1.0);
+ float gather=smoothstep(order*.34,.66+order*.34,uGather);
  float release=smoothstep(fract(seed*7.13+.17)*.18,.82+fract(seed*7.13+.17)*.18,uRelease);
  float formed=gather*(1.0-release);
  mat2 tilt=mat2(cos(uTilt),sin(uTilt),-sin(uTilt),cos(uTilt));
@@ -49,24 +57,36 @@ void main(){
  center.x+=uOutflow*5.2;
  center.y+=sin(uOutflow*3.14159265)*.14;
  if(gather>=1.0&&release<=0.0)center=target;
- vVisibility=uBirth*(1.0-uOutflow);
+ float presence=uBirth*(1.0-uOutflow),grow=1.0,swell=0.0;
+ vVisibility=presence;vGlow=0.0;
  if(uReduced>.5){center=target;vVisibility*=uGather*(1.0-uRelease);}
  else center=mix(center,applyPortraitPointField(center,seed),uInteraction*formed);
  vSeed=seed;vFormation=formed;vEnergy=aEnergy;
  vDust=nebulaDustColor(seed,aCloud.x*1.35+aCloud.z*.42);
- if(uReduced<.5)vVisibility*=mix(.24,1.0,formed);
- gl_Position=projectionMatrix*modelViewMatrix*vec4(center+corner*(uReduced>.5?1.0:mix(.28,1.0,formed)),1.0);
+ if(uReduced<.5){
+  // Every grain is in flight within the first third of its path, and the ones
+  // absent from the resting dust swell from nothing instead of switching on.
+  vVisibility*=mix(.24,1.0,clamp(formed/.35,0.0,1.0));
+  float born=(seed/max(presence,.0001)-.24)/.76;
+  if(born>0.0)grow=smoothstep(0.0,1.0,(formed-born*.35)/.30);
+  // Speed lights and swells the grain; both are spent as it lands on the glyph.
+  if(formed>0.0&&formed<1.0){
+   vGlow=pow(max(0.0,sin(pow(formed,1.25)*3.14159265)),1.2);
+   swell=max(0.0,sin(formed*3.14159265))*.30;
+  }
+ }
+ gl_Position=projectionMatrix*modelViewMatrix*vec4(center+corner*(uReduced>.5?1.0:(mix(.28,1.0,formed)+swell)*grow),1.0);
 }`;
 const fragmentShader = `
 uniform vec3 uBrand;
-varying float vSeed,vVisibility,vFormation,vEnergy;
+varying float vSeed,vVisibility,vFormation,vEnergy,vGlow;
 varying vec3 vDust;
 void main(){
  if(vVisibility<=0.0||vSeed>=vVisibility)discard;
  vec3 neutral=vec3(.76,.79,.85);
  vec3 tint=mix(neutral,uBrand,pow(vFormation,1.5)*.72);
- tint=mix(vDust,tint,vFormation);
- gl_FragColor=vec4(tint*vEnergy,1.0);
+ tint=mix(vDust,tint,smoothstep(0.0,.55,vFormation));
+ gl_FragColor=vec4(tint*vEnergy*(1.0+vGlow*1.6),1.0);
 }`;
 
 async function rasterize(url) {
@@ -132,8 +152,13 @@ export async function createPlatformMeshes({ THREE, scene, camera }) {
   }
   const projected=new THREE.Vector3();
   let viewportWidth=innerWidth,viewportHeight=innerHeight;
+  // value follows the scroll target in time; glyphs holds each icon's own share of it.
+  const entrance={value:0,target:0,glyphs:Object.fromEntries(groups.map(group=>[group.id,0]))};
+  let lastTime=NaN;
   const api={
     groups,
+    entranceValue(){return entrance.value;},
+    entranceStats(){return {value:entrance.value,target:entrance.target,settled:entrance.value===entrance.target,glyphs:{...entrance.glyphs}};},
     layout({width,height,camera:nextCamera}){
       camera=nextCamera;viewportWidth=width;viewportHeight=height;
       const worldPerPixel=(camera.right-camera.left)/width;
@@ -179,9 +204,23 @@ export async function createPlatformMeshes({ THREE, scene, camera }) {
       for(const group of groups)group.pulse.layout(anchors[group.id],width,height,worldPerPixel);
     },
     anchors(){const anchors={};for(const group of groups){const b=group.bounds,size=group.uniforms.uSize.value;projected.copy(group.uniforms.uTarget.value);projected.x+=(b.left+b.right)*size*.5;projected.y+=(b.bottom+b.top)*size*.5;projected.project(camera);const pixels=size/(camera.right-camera.left)*viewportWidth;anchors[group.id]={x:(projected.x+1)*viewportWidth*.5,y:(1-projected.y)*viewportHeight*.5,width:(b.right-b.left)*pixels,height:(b.top-b.bottom)*pixels};}return anchors;},
-    update({phase,time,mode,reduced,pointer,pointerStrength,hoverActive=false,paused=false,pixelRatio=1}){
-      for(const group of groups){const u=group.uniforms;u.uTime.value=time;u.uGather.value=phase.logoGather;u.uRelease.value=phase.logoRelease;u.uBirth.value=phase.birth;u.uOutflow.value=phase.outflow;u.uReduced.value=reduced?1:0;u.uInteraction.value=phase.interaction;group.field.update({pointer,strength:pointerStrength,enabled:mode==='portrait'&&phase.interaction>0,reduced});group.mesh.visible=mode==='portrait'&&phase.birth*(1-phase.outflow)>0;}
-      const pulsePermitted=mode==='portrait'&&!reduced&&!paused&&phase.birth>=1&&phase.logoGather>=1&&phase.logoRelease<=0&&phase.outflow<=0&&phase.interaction>=.99;
+    update({phase,time,mode,reduced,animated=false,pointer,pointerStrength,hoverActive=false,paused=false,pixelRatio=1}){
+      // Controlled, paused and reduced frames take the scroll's logo value directly.
+      const live=animated&&!reduced&&mode==='portrait',elapsed=time-lastTime;lastTime=time;
+      const target=live?Math.max(phase.logoGather,Math.min(1,(phase.amyGather-ENTRANCE_FROM)/(ENTRANCE_TO-ENTRANCE_FROM))):phase.logoGather;
+      if(!live)entrance.value=target;
+      else if(elapsed>0){
+        // Once the chapter is already closing, finish under its dissolve.
+        const step=Math.min(elapsed,.05)*(phase.phase==='labelsOut'?5:1);
+        entrance.value=target>entrance.value?Math.min(target,entrance.value+step/ENTRANCE_SECONDS):Math.max(target,entrance.value-step/EXIT_SECONDS);
+      }
+      entrance.target=target;
+      const formedAll=entrance.value>=1;
+      for(let index=0;index<groups.length;index++){const group=groups[index],u=group.uniforms;
+        // Each glyph leaves promptly and lands softly.
+        const share=formedAll?1:1-Math.pow(1-Math.max(0,Math.min(1,(entrance.value-index*(1-GLYPH_SPAN)/(groups.length-1))/GLYPH_SPAN)),1.5);
+        entrance.glyphs[group.id]=share;u.uTime.value=time;u.uGather.value=share;u.uRelease.value=phase.logoRelease;u.uBirth.value=phase.birth;u.uOutflow.value=phase.outflow;u.uReduced.value=reduced?1:0;u.uInteraction.value=phase.interaction;group.field.update({pointer,strength:pointerStrength,enabled:mode==='portrait'&&phase.interaction>0,reduced});group.mesh.visible=mode==='portrait'&&phase.birth*(1-phase.outflow)>0;}
+      const pulsePermitted=mode==='portrait'&&!reduced&&!paused&&phase.birth>=1&&formedAll&&phase.logoRelease<=0&&phase.outflow<=0&&phase.interaction>=.99;
       for(const group of groups)group.pulse.update(time,pulsePermitted,hoverActive,pointer,pixelRatio);
     }
   };

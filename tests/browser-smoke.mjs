@@ -96,10 +96,26 @@ async function settle(page) {
   throw Error('Document scroll did not settle.');
 }
 
+// The Flow -> Nebulosa pan follows the scroll with a damped, Hero-wipe-like response.
+// Its visual state reaches the native stop only once that pan has converged.
+async function panSettled(page) {
+  await page.waitForFunction(() => {
+    const s = window.nebulosaPreview?.getState();
+    return !s || s.pan === (s.reduced ? Number(s.flowExit >= 1) : s.flowExit);
+  }, null, { timeout: 5000 });
+}
+
 async function wheelTo(page, readRemaining, predicate, maxSteps = 90) {
   for (let step = 0; step < maxSteps; step++) {
     if (await page.evaluate(predicate)) return;
-    const remaining = await page.evaluate(readRemaining);
+    let remaining = await page.evaluate(readRemaining);
+    // Already within the smallest wheel step of the stop: judge it after the pan
+    // converges instead of nudging a page that is already in place.
+    if (Math.abs(remaining) < 16) {
+      await panSettled(page);
+      if (await page.evaluate(predicate)) return;
+      remaining = await page.evaluate(readRemaining);
+    }
     const absRemaining = Math.abs(remaining);
     const stepSize = absRemaining >= 245
       ? Math.min(320, Math.round(absRemaining))

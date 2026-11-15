@@ -3,8 +3,8 @@ import { chromium } from 'playwright-core';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 
-const root = process.env.AMY_STEPS_URL || 'http://127.0.0.1:4173/AMY-v2.0/';
-const output = process.env.AMY_STEPS_OUTPUT || 'test-results/screen-steps';
+const root = process.env.AMY_STEPS_URL || 'http://127.0.0.1:4190/AMY-v2.0/';
+const output = process.env.AMY_STEPS_OUTPUT || '.audit/screen-steps-20261108/native-first';
 await mkdir(output,{recursive:true});
 const browser = await chromium.launch({channel:'chrome',headless:true});
 const report={url:root,browser:browser.version(),method:'Chrome native wheel/keyboard/CDP; no physical mouse',checks:[],cases:[],errors:[]};
@@ -57,8 +57,9 @@ try{
         check('One gesture includes Solar then its transformation into AMY',solar>=0&&morph>solar,{solar,morph,samples});
         const span=phase=>{const frames=samples.filter(s=>s.phase===phase);return frames.at(-1)?.at-frames[0]?.at;};
         check('Solar is a brief200 to600ms introduction',span('field')>=200&&span('field')<=600,{milliseconds:span('field')});
-        check('Portrait formation takes at least2600ms during the same step',span('amy')>=2600,{milliseconds:span('amy')});
-        check('AMY formation receives at least five times the Solar screen time',span('amy')>=span('field')*5,{solar:span('field'),amy:span('amy')});
+        check('Explosion and portrait cross the AMY phase in1000 to1750ms',span('amy')>=1000&&span('amy')<=1750,{milliseconds:span('amy')});
+        check('AMY receives at least three times the brief Solar screen time',span('amy')>=span('field')*3,{solar:span('field'),amy:span('amy')});
+        check('Single-step arrival has no long reconstruction pause',samples.at(-1).at<3800,{milliseconds:samples.at(-1).at});
       }
       if(['AMY','Setup'].includes(label))await page.screenshot({path:output+'/'+label+'.png'});
     }
@@ -121,7 +122,9 @@ try{
     await page.keyboard.press('PageUp');await destination(page,'AMY');
     await page.keyboard.press('PageDown');await destination(page,'Setup');
   });
-  for(const [name,options]of[['reduced-native',{reducedMotion:'reduce'}],['coarse-native',{hasTouch:true,viewport:{width:390,height:844},isMobile:true}]]){
+  // User decision (15-nov-2026): reduced motion is ignored, so it steps like the default.
+  await scenario('reduced-ignored-steps',{reducedMotion:'reduce'},async page=>{await ready(page);await page.mouse.move(8,40);await page.mouse.wheel(0,120);await destination(page,'Hero');await page.mouse.wheel(0,120);await destination(page,'Helix');});
+  for(const [name,options]of[['coarse-native',{hasTouch:true,viewport:{width:390,height:844},isMobile:true}]]){
     await scenario(name,options,async page=>{await ready(page);const before=await page.evaluate(()=>scrollY);await page.mouse.wheel(0,120);const after=await settle(page);check(name+' keeps native 120px',Math.abs(after-before-120)<=2,{before,after});});
   }
   await scenario('continuous-mode-opt-in',{},async page=>{
